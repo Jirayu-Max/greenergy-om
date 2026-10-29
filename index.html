@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Greenergy — Maintenance Dashboard</title>
+  <link rel="stylesheet" href="https://db.onlinewebfonts.com/c/0a54bd29f535bbdd5c69fdd2976d7b66?family=LINE+Seed+Sans+TH">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ══ HEADER ══ -->
+<header class="header">
+  <img class="header-logo-img" alt="GREENERGY" src="data:image/png;base64,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">
+  <span class="header-title">GREENERGY</span>
+  <span class="header-sub">| Maintenance Dashboard — O&amp;M</span>
+  <div class="header-spacer"></div>
+  <button id="cloud-chip" class="cloud-chip" style="display:none" onclick="openCloud()" title="สถานะคลาวด์ / บัญชี"></button>
+  <button class="btn-backup" onclick="openBackup()">📦 Backup / Restore</button>
+</header>
+
+<!-- ══ TABS ══ -->
+<nav class="tabs">
+  <div class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</div>
+  <div class="tab" data-tab="worklog"  onclick="switchTab('worklog')">📋 บันทึกงาน</div>
+  <div class="tab" data-tab="calendar" onclick="switchTab('calendar')">🗓️ Smart O&amp;M Calendar</div>
+  <div class="tab" data-tab="projects" onclick="switchTab('projects')">📑 Project list OM</div>
+  <div class="tab" data-tab="planpm"   onclick="switchTab('planpm')">🔧 Plan PM&amp;AN</div>
+</nav>
+
+<!-- ══ CONTENT ══ -->
+<main class="content">
+
+  <!-- ── DASHBOARD ── -->
+  <div id="tab-dashboard" class="tab-pane active">
+    <div class="exec-bar">
+      <div class="eb-t">📊 Executive Dashboard <span>Greenergy O&amp;M</span></div>
+      <div class="eb-p"><label>📆 ช่วงเวลา</label><span id="exec-periods" class="pbtns"></span>
+        <span class="eb-d"><input type="date" id="db-start"> <em>ถึง</em> <input type="date" id="db-end"></span>
+        <button class="btn-secondary" onclick="window.print()" title="พิมพ์ / บันทึกเป็น PDF เพื่อนำเสนอ">🖨️ พิมพ์ / PDF</button></div>
+    </div>
+    <div id="exec-root"></div>
+  </div>
+
+  <!-- ── WORK LOG ── -->
+  <div id="tab-worklog" class="tab-pane">
+
+    <!-- Dashboard เฉพาะหน้าบันทึกงาน (คำนวณจากตัวกรองปัจจุบัน) -->
+    <div class="wl-kpis">
+      <div class="kpi-card">       <div class="kpi-label">🗂️ งานทั้งหมด</div>     <div class="kpi-value" id="wl-k-total">0</div>  <div class="kpi-sub">Total Jobs</div></div>
+      <div class="kpi-card moss">  <div class="kpi-label">✅ เสร็จแล้ว</div>       <div class="kpi-value" id="wl-k-done">0</div>   <div class="kpi-sub" id="wl-k-done-sub">Completed</div></div>
+      <div class="kpi-card brown"> <div class="kpi-label">⚙️ กำลังดำเนินการ</div>  <div class="kpi-value" id="wl-k-inprog">0</div> <div class="kpi-sub" id="wl-k-inprog-sub">In Progress</div></div>
+      <div class="kpi-card gray">  <div class="kpi-label">⏳ รอดำเนินการ</div>    <div class="kpi-value" id="wl-k-pend">0</div>   <div class="kpi-sub" id="wl-k-pend-sub">Pending</div></div>
+      <div class="kpi-card blue" id="wl-k-sla-card"><div class="kpi-label">⏱️ SLA ทันกำหนด</div><div class="kpi-value" id="wl-k-sla">–</div><div class="kpi-sub" id="wl-k-sla-sub">SLA Compliance</div></div>
+    </div>
+
+    <div class="table-card wl-card">
+      <div class="wl-toolbar">
+        <div class="wl-toolbar-top">
+          <h3>📋 บันทึกงานบำรุงรักษา</h3>
+          <span id="wl-count" class="count-chip"></span>
+          <button class="btn-secondary" id="btn-clear-ppm" style="display:none" onclick="clearPpmSynced()" title="ลบงานที่เคยถูกดึงมาจาก Plan PM&amp;AN (ลบเฉพาะรายการที่ระบบซิงก์เอง)">🧹 ล้างงานที่ดึงจาก PM&amp;AN</button>
+          <button class="btn-secondary" onclick="clearWlFilters()" title="ล้างตัวกรองทั้งหมด">↺ ล้างตัวกรอง</button>
+          <button class="btn-primary" onclick="openAdd()">➕ เพิ่มงาน</button>
+        </div>
+        <div class="wl-filters">
+          <div class="wl-f wl-f-search"><span>ค้นหา</span><input type="text" id="srch" class="search-input" placeholder="🔍 ค้นหาทุกช่อง..."></div>
+          <div class="wl-f wl-f-range"><span>📆 ช่วงวันที่</span><div class="wl-range"><input type="date" id="wl-from"><em>ถึง</em><input type="date" id="wl-to"></div></div>
+          <div class="wl-f"><span>Type of work</span><div class="ms" id="f-type"></div></div>
+          <div class="wl-f"><span>Project</span><div class="ms" id="f-projectf"></div></div>
+          <div class="wl-f"><span>Owner</span><div class="ms" id="f-ownerf"></div></div>
+          <div class="wl-f"><span>สถานะ</span><div class="ms" id="f-stat"></div></div>
+          <div class="wl-f"><span>Priority</span><div class="ms" id="f-prio"></div></div>
+          <div class="wl-f"><span>SLA</span><div class="ms" id="f-sla"></div></div>
+        </div>
+      </div>
+      <div class="table-wrap wl-wrap">
+        <table class="zebra">
+          <thead><tr>
+            <th>NO.</th><th>Start</th><th>Finish</th><th>Plan</th><th>SLA (H)</th><th>Project</th><th>Owner</th>
+            <th>Type of work</th><th>Job Description</th><th>Detail</th><th>Operator</th>
+            <th>Days Passed</th><th>Priority</th><th>สถานะ</th><th>SLA</th><th>Report#</th><th>จัดการ</th>
+          </tr></thead>
+          <tbody id="wl-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SMART O&M CALENDAR ── -->
+  <div id="tab-calendar" class="tab-pane">
+    <div class="cal-toolbar">
+      <button class="btn-secondary" onclick="calNav(-1)">◀ เดือนก่อน</button>
+      <button class="btn-secondary" onclick="calNav(0)">⌂ เดือนปัจจุบัน</button>
+      <button class="btn-secondary" onclick="calNav(1)">เดือนถัดไป ▶</button>
+      <h3 id="cal-title">–</h3>
+      <label class="cal-teamf">Operator <select id="cal-op" class="filter-sel" onchange="renderCalendar()"></select></label>
+      <label class="cal-teamf">Subcontractor <select id="cal-team" class="filter-sel" onchange="renderCalendar()"></select></label>
+    </div>
+    <div class="cal-legend">
+      <span><i class="lg k-an"></i>AN</span><span><i class="lg k-ppm"></i>PPM / QPM</span><span><i class="lg k-gen"></i>งานทั่วไป (บันทึกงาน)</span>
+      <span class="hint">🖱️ ลากงานไปวางวันใหม่ได้ — จำนวนวันของงานเดิมคงเดิม (ขยับทั้งช่วง Start–END)</span>
+    </div>
+    <div class="cal-wrap">
+      <div class="cal-dow"><div>อา.</div><div>จ.</div><div>อ.</div><div>พ.</div><div>พฤ.</div><div>ศ.</div><div>ส.</div></div>
+      <div id="cal-grid" class="cal-grid"></div>
+    </div>
+    <div class="table-card" style="margin-top:14px">
+      <div class="table-header"><h3>👥 Resource Planning — แยกตาม <select id="cal-res-by" class="filter-sel" onchange="renderCalendar()"><option value="team">Subcontractor / ทีม</option><option value="op">Operator</option></select> <span class="hint">(ตัวเลข = จำนวนงานในวันนั้น • สีส้ม/แดง = ทีมมีงานซ้อนกัน)</span></h3></div>
+      <div class="table-wrap res-wrap" id="cal-res"></div>
+    </div>
+  </div>
+
+  <!-- ── PROJECT LIST OM ── -->
+  <div id="tab-projects" class="tab-pane">
+    <div class="kpi-grid">
+      <div class="kpi-card">       <div class="kpi-label">📑 จำนวนโปรเจกต์</div>  <div class="kpi-value" id="pj-total">0</div>   <div class="kpi-sub">Total Projects</div></div>
+      <div class="kpi-card moss">  <div class="kpi-label">⚡ กำลังผลิตรวม</div>   <div class="kpi-value" id="pj-cap">0</div>     <div class="kpi-sub">Installed MW</div></div>
+      <div class="kpi-card">       <div class="kpi-label">▶️ Start OM</div>      <div class="kpi-value" id="pj-startom">0</div> <div class="kpi-sub">contracts</div></div>
+      <div class="kpi-card gray">  <div class="kpi-label">📦 Awaiting Handover</div><div class="kpi-value" id="pj-hand">0</div>   <div class="kpi-sub">projects</div></div>
+      <div class="kpi-card blue">  <div class="kpi-label">🔄 Renew OM 2026</div> <div class="kpi-value" id="pj-renew">0</div>  <div class="kpi-sub">contracts</div></div>
+      <div class="kpi-card amber"> <div class="kpi-label">🛠️ PPM</div>          <div class="kpi-value" id="pj-ppm">0</div>    <div class="kpi-sub">projects</div></div>
+    </div>
+    <div id="alert-center" class="alert-center"></div>
+    <div class="table-card">
+      <div class="table-header">
+        <h3>📑 Project list OM</h3>
+        <input type="text" id="pj-srch" class="search-input" placeholder="🔍 ค้นหาโปรเจกต์ / จังหวัด / owner...">
+        <select id="pj-fregion" class="filter-sel"><option value="">ภูมิภาคทั้งหมด</option></select>
+        <select id="pj-ftype"   class="filter-sel"><option value="">ประเภททั้งหมด</option></select>
+        <select id="pj-fstatus" class="filter-sel"><option value="">สถานะทั้งหมด</option></select>
+        <select id="pj-fomexp"  class="filter-sel"><option value="">OM Expiry ทั้งหมด</option></select>
+        <select id="pj-fowner"  class="filter-sel"><option value="">Owner ทั้งหมด</option></select>
+        <span id="pj-count" class="count-chip"></span>
+        <button class="btn-primary" onclick="openAddProj()">➕ เพิ่ม Project</button>
+      </div>
+      <div class="table-wrap tbl-scroll">
+        <table class="zebra tbl-sticky sticky-2">
+          <thead><tr>
+            <th>No.</th><th>Project</th><th>Capacity</th><th>Unit</th><th>Project Type</th>
+            <th>Regional</th><th>Province</th><th>Owner</th><th>Status</th>
+            <th>OM/Y</th><th>Start OM</th><th>Stop OM</th><th>Warranty (Y)</th><th>Stop Warranty</th>
+            <th style="width:160px">GPS</th><th style="width:200px">ติดต่อ</th><th style="width:150px">🔗 ลิงก์</th><th style="width:140px">Budget ตามสัญญา (฿)</th>
+            <th>จัดการ</th>
+          </tr></thead>
+          <tbody id="pj-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PLAN PM & AN ── -->
+  <div id="tab-planpm" class="tab-pane">
+    <div class="kpi-grid" style="grid-template-columns:repeat(6,1fr)">
+      <div class="kpi-card">       <div class="kpi-label">📋 งานทั้งหมด</div> <div class="kpi-value" id="ppm-total">0</div>  <div class="kpi-sub">Activities</div></div>
+      <div class="kpi-card">       <div class="kpi-label">🔧 QPM</div>        <div class="kpi-value" id="ppm-qpm">0</div>    <div class="kpi-sub">Quarterly PM</div></div>
+      <div class="kpi-card blue">  <div class="kpi-label">🛠️ AN</div>         <div class="kpi-value" id="ppm-an">0</div>     <div class="kpi-sub">Annual</div></div>
+      <div class="kpi-card moss">  <div class="kpi-label">✅ เสร็จแล้ว</div>  <div class="kpi-value" id="ppm-done">0</div>   <div class="kpi-sub">Done</div></div>
+      <div class="kpi-card amber"> <div class="kpi-label">📈 % สำเร็จ</div>    <div class="kpi-value" id="ppm-pct">0%</div>   <div class="kpi-sub">Progress</div></div>
+      <div class="kpi-card gray">  <div class="kpi-label">💰 BOQ รวม</div>    <div class="kpi-value" id="ppm-budget" style="font-size:19px">฿0</div><div class="kpi-sub">BOQ</div></div>
+    </div>
+    <div class="charts-grid" style="grid-template-columns:1.4fr 1fr;margin-bottom:14px">
+      <div class="chart-card">
+        <h3>📊 แผน PM &amp; AN รายเดือน <span class="hint">(QPM/AN • เข้ม = สำเร็จ, อ่อน = คงเหลือ, ส้ม = เลื่อน)</span></h3>
+        <div style="height:250px"><canvas id="ppmChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>💰 BOQ / Actual แยกตาม Activity</h3>
+        <div style="height:250px"><canvas id="ppmBudgetChart"></canvas></div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <h3>📋 Plan PM &amp; AN</h3>
+        <input type="text" id="ppm-srch" class="search-input" placeholder="🔍 ค้นหา project / activity / owner...">
+        <select id="ppm-fyear"   class="filter-sel"><option value="">ทุกปี</option></select>
+        <select id="ppm-fmonth"  class="filter-sel"><option value="">ทุกเดือน</option></select>
+        <select id="ppm-ftype"   class="filter-sel"><option value="">ทุกประเภท</option></select>
+        <select id="ppm-factivity" class="filter-sel"><option value="">ทุก Activity</option></select>
+        <select id="ppm-fowner"  class="filter-sel"><option value="">ทุก Owner</option></select>
+        <select id="ppm-fstatus" class="filter-sel"><option value="">ทุกสถานะ</option><option value="done">เสร็จแล้ว</option><option value="inprog">กำลังดำเนินการ</option><option value="pending">ยังไม่เริ่ม</option><option value="postponed">เลื่อน</option></select>
+        <span id="ppm-count" class="count-chip"></span>
+        <button class="btn-primary" onclick="openAddPpm()">➕ เพิ่มงาน</button>
+      </div>
+      <div class="table-wrap tbl-scroll">
+        <table class="zebra tbl-sticky sticky-3">
+          <thead><tr>
+            <th>เดือน</th><th>NO.</th><th>Project</th><th>Capacity</th><th>Owner</th><th>Activity</th>
+            <th>PM&amp;AN</th><th>Round</th><th>Start</th><th>END</th><th>Days</th><th>BOQ (฿)</th><th>Actual (฿)</th><th>Progress</th><th>Subcontractor</th><th>Operator</th><th>จัดการ</th>
+          </tr></thead>
+          <tbody id="ppm-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- datalists for project form -->
+<datalist id="dl-type"></datalist>
+<datalist id="dl-region"></datalist>
+
+<!-- ══ RECORD MODAL ══ -->
+<div id="rec-modal" class="modal-overlay">
+  <div class="modal modal-wide">
+    <h2 id="modal-title">เพิ่มรายการงาน</h2>
+    <form id="rec-form" class="modal-form" onsubmit="event.preventDefault(); saveRecord();">
+      <div class="modal-body">
+
+        <section class="form-section">
+          <div class="fs-title">📅 วันที่</div>
+          <div class="form-grid cols-4">
+            <div class="form-group"><label>Start (วันที่เริ่ม) *</label><input type="date" id="f-start" required></div>
+            <div class="form-group"><label>Finish (วันที่เสร็จ)</label><input type="date" id="f-finish"></div>
+            <div class="form-group"><label>Plan (วันที่แผนงาน)</label><input type="date" id="f-plan"></div>
+            <div class="form-group"><label>SLA (ชม. / H) <span class="lbl-hint">เป้าหมาย</span></label><input type="number" id="f-sla-h" min="0" step="0.5" placeholder="เช่น 24"></div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <div class="fs-title">🏭 Project</div>
+          <div class="form-grid cols-2">
+            <div class="form-group"><label>Owner <span class="lbl-hint">(เลือกก่อน → Project จะแสดงเฉพาะของ Owner นั้น)</span></label><div class="opt-row"><select id="f-owner" onchange="fillProjectSelect($('f-project').value)"></select><button type="button" class="btn-add-opt" title="เพิ่ม Owner" onclick="addOpt('owner','Owner','f-owner')">＋</button><button type="button" class="btn-del-opt" title="ลบรายการที่เลือก" onclick="delOpt('owner','Owner','f-owner')">🗑</button></div></div>
+            <div class="form-group"><label>Project <span class="lbl-hint">(จาก Project list OM)</span></label><div class="opt-row"><select id="f-project"></select><button type="button" class="btn-add-opt" title="เพิ่ม Project" onclick="addOpt('project','Project','f-project')">＋</button><button type="button" class="btn-del-opt" title="ลบรายการที่เลือก" onclick="delOpt('project','Project','f-project')">🗑</button></div></div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <div class="fs-title">🛠️ ประเภทงาน &amp; ผู้รับผิดชอบ</div>
+          <div class="form-grid cols-3">
+            <div class="form-group"><label>Type of work</label><div class="opt-row"><select id="f-worktype"></select><button type="button" class="btn-add-opt" title="เพิ่ม Type of work" onclick="addOpt('typeOfWork','Type of work','f-worktype')">＋</button><button type="button" class="btn-del-opt" title="ลบรายการที่เลือก" onclick="delOpt('typeOfWork','Type of work','f-worktype')">🗑</button></div></div>
+            <div class="form-group"><label>Job Description</label><div class="opt-row"><select id="f-jobdesc"></select><button type="button" class="btn-add-opt" title="เพิ่ม Job Description" onclick="addOpt('jobDescriptions','Job Description','f-jobdesc')">＋</button><button type="button" class="btn-del-opt" title="ลบรายการที่เลือก" onclick="delOpt('jobDescriptions','Job Description','f-jobdesc')">🗑</button></div></div>
+            <div class="form-group"><label>Operator <span class="lbl-hint">(ทำหลายคน — เพิ่มช่องได้)</span></label><div class="ops-box" id="f-ops"></div></div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <div class="fs-title">🚦 สถานะ</div>
+          <div class="form-grid cols-4">
+            <div class="form-group"><label>Priority</label>
+              <div class="opt-row"><select id="f-priority"></select>
+              <button type="button" class="btn-add-opt" title="เพิ่ม Priority" onclick="addOpt('priority','Priority','f-priority')">＋</button>
+              <button type="button" class="btn-del-opt" title="ลบรายการที่เลือก" onclick="delOpt('priority','Priority','f-priority')">✕</button>
+            </div>
+            </div>
+            <div class="form-group"><label>สถานะ (Status)</label>
+              <div class="opt-row"><select id="f-status"></select>
+              <button type="button" class="btn-add-opt" title="เพิ่ม สถานะ" onclick="addOpt('status','สถานะ','f-status')">＋</button>
+              <button type="button" class="btn-del-opt" title="ลบรายการที่เลือก" onclick="delOpt('status','สถานะ','f-status')">✕</button>
+            </div>
+            </div>
+            <div class="form-group"><label>SLA Status (ชม. / H) <span class="lbl-hint">ใช้จริง • ว่าง = คำนวณจาก Start→Finish</span></label>
+              <input type="number" id="f-sla-act" min="0" step="0.5" placeholder="อัตโนมัติ">
+            </div>
+            <div class="form-group"><label>Report# (สถานะรายงาน)</label>
+              <div class="opt-row"><select id="f-report"></select>
+              <button type="button" class="btn-add-opt" title="เพิ่ม Report#" onclick="addOpt('report','Report#','f-report')">＋</button>
+              <button type="button" class="btn-del-opt" title="ลบรายการที่เลือก" onclick="delOpt('report','Report#','f-report')">✕</button>
+            </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <div class="fs-title">📝 รายละเอียด</div>
+          <div class="form-group full">
+            <label>Detail <span class="lbl-hint">(เพิ่ม ＋ / ลบ 🗑 ได้หลายช่อง)</span></label>
+            <div id="detail-container"></div>
+            <button type="button" class="btn-add-jd" onclick="addDetail()">＋ เพิ่ม Detail</button>
+          </div>
+        </section>
+
+      </div>
+      <div class="modal-footer modal-footer-sticky">
+        <button type="button" class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
+        <button type="submit" class="btn-primary">💾 บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══ BACKUP MODAL ══ -->
+<div id="bk-modal" class="modal-overlay">
+  <div class="modal" style="max-width:480px">
+    <h2>📦 Backup &amp; Restore ข้อมูล</h2>
+    <p style="font-size:12px;color:#666">ข้อมูลเก็บใน LocalStorage ของเบราว์เซอร์ — สำรองข้อมูลเป็นประจำเพื่อป้องกันการสูญหาย</p>
+    <div class="backup-grid">
+      <button class="backup-btn" onclick="exportJSON()">
+        <span class="ico">📤</span>
+        <span class="ttl">Export JSON</span>
+        <span class="dsc">สำรองข้อมูลทั้งหมด (แนะนำ)</span>
+      </button>
+      <button class="backup-btn" onclick="importJSON()">
+        <span class="ico">📥</span>
+        <span class="ttl">Import JSON</span>
+        <span class="dsc">กู้คืนจากไฟล์สำรอง</span>
+      </button>
+      <button class="backup-btn" onclick="exportCSV()">
+        <span class="ico">📊</span>
+        <span class="ttl">Export CSV</span>
+        <span class="dsc">ส่งออกสำหรับ Excel</span>
+      </button>
+    </div>
+    <div class="info-box">
+      💡 <b>คำแนะนำ:</b> Export JSON ทุกสัปดาห์ เก็บไว้ใน OneDrive เพื่อสำรองข้อมูลอัตโนมัติ
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeBackup()">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DRILL-DOWN MODAL (chart click) ══ -->
+<div id="drill-modal" class="modal-overlay">
+  <div class="modal" style="max-width:880px">
+    <h2 id="drill-title">รายการงาน</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Start</th><th>Finish</th><th>Project</th><th>Type of work</th><th>Detail</th><th>Operator</th><th>สถานะ</th><th>Report#</th><th>จัดการ</th></tr></thead>
+        <tbody id="drill-tbody"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeDrill()">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PROJECT MODAL ══ -->
+<div id="proj-modal" class="modal-overlay">
+  <div class="modal">
+    <h2 id="proj-title">เพิ่ม Project</h2>
+    <form id="proj-form" onsubmit="event.preventDefault(); saveProj();">
+      <div class="form-grid">
+        <div class="form-group"><label>No.</label><input type="number" id="p-no" min="0"></div>
+        <div class="form-group"><label>Project name *</label><input type="text" id="p-name" required placeholder="ชื่อโปรเจกต์"></div>
+        <div class="form-group"><label>Owner</label>
+          <div class="opt-row"><select id="p-owner"></select>
+            <button type="button" class="btn-add-opt" title="เพิ่ม Owner ใหม่" onclick="addOpt('pjOwner','Owner','p-owner')">＋</button>
+            <button type="button" class="btn-del-opt" title="ลบรายการที่เลือก" onclick="delOpt('pjOwner','Owner','p-owner')">🗑</button>
+          </div>
+        </div>
+        <div class="form-group"><label>Status</label>
+          <div class="opt-row"><select id="p-status"></select>
+            <button type="button" class="btn-add-opt" title="เพิ่ม Status ใหม่" onclick="addOpt('pjStatus','Status','p-status')">＋</button>
+            <button type="button" class="btn-del-opt" title="ลบรายการที่เลือก" onclick="delOpt('pjStatus','Status','p-status')">🗑</button>
+          </div>
+        </div>
+        <div class="form-group"><label>Capacity</label><input type="number" id="p-cap" step="0.0001" min="0" placeholder="0.0"></div>
+        <div class="form-group"><label>Unit</label><input type="text" id="p-unit" value="MW"></div>
+        <div class="form-group"><label>Project Type</label><input type="text" id="p-type" list="dl-type" placeholder="Solar Rooftop"></div>
+        <div class="form-group"><label>Regional <span class="lbl-hint">(อัตโนมัติ)</span></label><input type="text" id="p-region" readonly style="background:#f1efe9" placeholder="เติมอัตโนมัติจากจังหวัด"></div>
+        <div class="form-group"><label>Province <span class="lbl-hint">(77 จังหวัด)</span></label><select id="p-province" onchange="pjProvChange()"></select></div>
+        <div class="form-group"><label>GPS (พิกัด / ลิงก์แผนที่)</label>
+          <div class="opt-row"><input type="text" id="p-gps" placeholder="13.7563, 100.5018">
+            <button type="button" class="btn-add-opt" title="คัดลอกส่งต่อ" onclick="copyShare(document.getElementById('p-gps').value)">📋</button>
+          </div>
+        </div>
+        <div class="form-group"><label>OM/Y (ปี)</label><input type="number" id="p-omy" min="0" step="1" placeholder="5" oninput="pjCalcStops(true)"></div>
+        <div class="form-group"><label>Start OM</label><input type="date" id="p-start" onchange="pjCalcStops(true)"></div>
+        <div class="form-group"><label>Stop OM <span class="lbl-hint">(Start OM + OM/Y − 1 วัน)</span></label><input type="date" id="p-stop" readonly style="background:#f1efe9"></div>
+        <div class="form-group"><label>Warranty Year</label><input type="number" id="p-wy" min="0" step="1" placeholder="2" oninput="pjCalcStops(true)"></div>
+        <div class="form-group"><label>Stop Warranty <span class="lbl-hint">(Start OM + Warranty Y − 1 วัน)</span></label><input type="date" id="p-stopw" readonly style="background:#f1efe9"></div>
+        <div class="form-group full"><label>เบอร์ติดต่อ <span style="color:#999;font-weight:400;text-transform:none">(＋/🗑 ได้หลายเบอร์ • คัดลอกส่งต่อได้)</span></label>
+          <div id="p-phones"></div>
+          <button type="button" class="btn-add-jd" onclick="addContact('p-phones','p-phone')">＋ เพิ่มเบอร์ติดต่อ</button>
+        </div>
+        <div class="form-group full"><label>อีเมล <span style="color:#999;font-weight:400;text-transform:none">(＋/🗑 ได้หลายอีเมล • คัดลอกส่งต่อได้)</span></label>
+          <div id="p-emails"></div>
+          <button type="button" class="btn-add-jd" onclick="addContact('p-emails','p-email')">＋ เพิ่มอีเมล</button>
+        </div>
+        <div class="form-group full"><label>🔗 ลิงก์แชร์โฟลเดอร์/พอร์ต <span style="color:#999;font-weight:400;text-transform:none">(ชื่อ + URL • ＋ เพิ่ม / ✕ ลบ • เช่น SharePoint, OneDrive, Google Drive)</span></label>
+          <div id="p-links"></div>
+          <button type="button" class="btn-add-jd" onclick="addLinkRow()">＋ เพิ่มลิงก์</button>
+        </div>
+        <div class="form-group"><label>Budget ตามสัญญา (฿) <span style="color:#999;font-weight:400;text-transform:none">(แสดงหน้าหลัก)</span></label><input type="number" id="p-budcontract" min="0" step="0.01"></div>
+        <div class="form-group"><label>Budget 1 ปี (฿)</label><input type="number" id="p-budyear" min="0" step="0.01"></div>
+        <div class="form-group full"><label>Budget — BOQ ตาม Activity <span style="color:#999;font-weight:400;text-transform:none">(เลือก Activity + ใส่ BOQ • ＋ เพิ่ม / ✕ ลบ • เชื่อมไป Plan PM&amp;AN)</span></label>
+          <div id="p-boq"></div>
+          <button type="button" class="btn-add-jd" onclick="addBoqRow()">＋ เพิ่ม BOQ</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeProj()">ยกเลิก</button>
+        <button type="submit" class="btn-primary">💾 บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══ PLAN PM&AN MODAL ══ -->
+<div id="ppm-modal" class="modal-overlay">
+  <div class="modal modal-wide">
+    <h2 id="ppm-title">เพิ่มงาน PM &amp; AN</h2>
+    <form id="ppm-form" class="modal-form" onsubmit="event.preventDefault(); savePpm();">
+      <div class="modal-body">
+        <section class="form-section">
+          <div class="fs-title">🏭 Project <span class="lbl-hint">(เลือก Owner ก่อน → Project ของ Owner นั้น • ข้อมูลที่เหลือเติมอัตโนมัติจาก Project list OM)</span></div>
+          <div class="form-grid cols-3">
+            <div class="form-group"><label>Owner</label><div class="opt-row"><select id="pp-owner" onchange="ppmOwnerChange()"></select><button type="button" class="btn-add-opt" title="เพิ่ม x" onclick="addOpt('ppmOwner','Owner','pp-owner')">＋</button><button type="button" class="btn-del-opt" title="ลบรายการที่เลือก" onclick="delOpt('ppmOwner','Owner','pp-owner')">✕</button></div></div>
+            <div class="form-group"><label>Project *</label><div class="opt-row"><select id="pp-plant" onchange="ppmProjectChange(this)"></select><button type="button" class="btn-add-opt" title="เพิ่ม Project" onclick="addOpt('ppmProject','Project','pp-plant')">＋</button><button type="button" class="btn-del-opt" title="ลบรายการที่เลือก" onclick="delOpt('ppmProject','Project','pp-plant')">✕</button></div></div>
+            <div class="form-group"><label>Project Type</label><input type="text" id="pp-ptype" list="dl-type"></div>
+            <div class="form-group"><label>Capacity / Unit</label><div class="opt-row"><input type="number" id="pp-cap" step="0.0001" min="0" style="flex:1;min-width:0"><input type="text" id="pp-unit" value="MW." style="width:70px"></div></div>
+            <div class="form-group"><label>Regional</label><input type="text" id="pp-region" list="dl-region"></div>
+            <div class="form-group"><label>Province</label><input type="text" id="pp-province"></div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <div class="fs-title">🛠️ PM&amp;AN <span class="lbl-hint">เพิ่มได้หลายงานในครั้งเดียว — กด “＋ เพิ่มงาน” / “🗑 ลบงานนี้”</span> <span id="pp-row-count" class="lbl-hint"></span></div>
+          <div id="pp-rows"></div>
+          <button type="button" class="btn-add-jd" id="pp-add-row" onclick="ppmAddRow(null)">＋ เพิ่มงาน PM&amp;AN</button>
+        </section>
+      </div>
+      <div class="modal-footer modal-footer-sticky">
+        <button type="button" class="btn-cancel" onclick="closePpm()">ยกเลิก</button>
+        <button type="submit" class="btn-primary">💾 บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══ CALENDAR DETAIL MODAL ══ -->
+<div id="cal-detail" class="modal-overlay">
+  <div class="modal modal-wide" style="max-width:640px">
+    <h2 id="cd-title">รายละเอียดงาน</h2>
+    <div class="modal-form"><div class="modal-body"><div id="cd-body" class="cd-grid"></div></div>
+    <div class="modal-footer modal-footer-sticky">
+      <button type="button" class="btn-cancel" onclick="closeCalDetail()">ปิด</button>
+      <button type="button" class="btn-del" style="padding:9px 18px" onclick="calDetailDel()">🗑️ ลบ</button>
+      <button type="button" class="btn-primary" onclick="calDetailEdit()">✏️ แก้ไข</button>
+    </div></div>
+  </div>
+</div>
+
+<!-- ══ OPERATOR & EMAIL MODAL ══ -->
+<div id="op-modal" class="modal-overlay">
+  <div class="modal modal-wide" style="max-width:820px">
+    <h2>👤 Operator &amp; อีเมล — ส่งงานเข้า Calendar ของแต่ละคน</h2>
+    <div class="modal-form"><div class="modal-body">
+      <div class="op-help">คลิกงานในปฏิทิน → กดส่งเข้า Calendar ของ Operator (Google / Outlook / ไฟล์ .ics) หรือกด “ส่งงานเดือนนี้” ที่แถวของแต่ละคนเพื่อได้ไฟล์ .ics รวมทุกงานของเดือน</div>
+      <div class="form-group full"><label>อีเมลผู้ส่ง (Organizer) <span class="lbl-hint">ไม่บังคับ — ถ้าใส่ ไฟล์ .ics จะเป็นคำเชิญนัดหมายที่ระบุ Operator เป็นผู้เข้าร่วม</span></label><input type="text" id="op-org" placeholder="you@company.com"></div>
+      <div class="form-section" style="margin-top:12px"><div class="fs-title">🔗 ส่งงานเข้า Outlook / Teams ทันที (Power Automate)</div>
+        <div class="form-group full"><label>Flow URL <span class="lbl-hint">(HTTP POST URL จาก Power Automate)</span></label><input type="text" id="op-flow" placeholder="https://prod-xx.logic.azure.com/workflows/..."></div>
+        <label style="font-size:12.5px;display:block;margin:8px 0"><input type="checkbox" id="op-auto"> ส่งเข้า Calendar อัตโนมัติ เมื่อบันทึกงานใหม่ที่มี Operator (และมีอีเมล)</label>
+        <button type="button" class="btn-secondary" onclick="opTestFlow()">🧪 ทดสอบส่ง</button>
+        <details class="op-steps"><summary>วิธีตั้งค่า (ทำครั้งเดียว ~5 นาที)</summary><ol>
+          <li>เปิด <b>make.powerautomate.com</b> (Trigger “HTTP request” เป็น Premium connector — ต้องมีสิทธิ์ Power Automate Premium) → Create → <b>Instant cloud flow</b> → Trigger: <b>When an HTTP request is received</b> (Who can trigger = Anyone)</li>
+          <li>เพิ่ม action <b>Compose</b> ใส่ Expression: <code>json(base64ToString(triggerBody()?['$content']))</code></li>
+          <li>เพิ่ม <b>Office 365 Outlook → Create event (V4)</b> แล้วกรอกแต่ละช่องโดยกด <b>Expression (fx)</b>: Calendar id=<b>Calendar</b> • Subject=<code>outputs('Compose')?['title']</code> • Start time=<code>concat(outputs('Compose')?['start'],'T08:00:00')</code> • End time=<code>concat(outputs('Compose')?['end'],'T17:00:00')</code> • Time zone=<b>(UTC+07:00) Bangkok, Hanoi, Jakarta</b> • Required attendees=<code>outputs('Compose')?['attendeesText']</code> • Body=<code>outputs('Compose')?['description']</code> • Location=<code>outputs('Compose')?['location']</code></li>
+          <li>Save → คัดลอก <b>HTTP POST URL</b> มาวางในช่อง Flow URL ด้านบน แล้วกด “ทดสอบส่ง”</li>
+          <li>งานจะถูกสร้างใน Outlook Calendar ของเจ้าของ Flow และส่งคำเชิญให้ Operator ทุกคน → เห็นใน Outlook และ Teams Calendar ของแต่ละคน</li></ol>
+          <div class="op-warn">⚠️ ใครมี URL นี้ก็สั่งสร้างนัดหมายได้ อย่าแชร์ และ URL จะอยู่ในไฟล์ Backup ด้วย</div></details></div>
+      <div id="op-list" style="margin-top:10px"></div>
+      <div class="form-section" style="margin-top:12px"><div class="fs-title">➕ เพิ่ม Operator ใหม่ / เพิ่มอีเมล</div>
+        <div class="form-grid cols-3"><div class="form-group"><label>ชื่อ Operator</label><input type="text" id="op-new-name" placeholder="เช่น เสือ"></div>
+        <div class="form-group"><label>อีเมล</label><input type="text" id="op-new-email" placeholder="a@x.com, b@x.com"></div>
+        <div class="form-group"><label>&nbsp;</label><button type="button" class="btn-secondary" onclick="opAddPerson()">＋ เพิ่ม</button></div></div></div>
+    </div>
+    <div class="modal-footer modal-footer-sticky">
+      <button type="button" class="btn-cancel" onclick="closeOp()">ปิด</button>
+      <button type="button" class="btn-primary" onclick="opSave()">💾 บันทึกอีเมล</button>
+    </div></div>
+  </div>
+</div>
+
+<script src="cloud-config.js"></script>
+<script src="supabase.min.js"></script>
+<script src="projects.js"></script>
+<script src="planpm.js"></script>
+<script src="app.js"></script>
+<script src="calendar.js"></script>
+<script src="dashboard.js"></script>
+<script src="cloud.js"></script>
+<!-- ══ CLOUD: LOGIN / MENU / USERS ══ -->
+<div id="login-ov" class="login-ov" style="display:none">
+  <div class="login-box">
+    <div class="login-t">🌿 GREENERGY O&amp;M</div><div class="login-s">เข้าสู่ระบบเพื่อดูและแก้ไขข้อมูลกลางของทีม</div>
+    <label>อีเมล</label><input type="email" id="login-email" autocomplete="username" placeholder="name@company.com">
+    <label>รหัสผ่าน</label><input type="password" id="login-pw" autocomplete="current-password">
+    <div id="login-msg" class="login-msg"></div>
+    <button class="btn-primary" style="width:100%" onclick="cloudLogin(false)">เข้าสู่ระบบ</button>
+    <button class="btn-secondary" style="width:100%;margin-top:8px" onclick="cloudLogin(true)">สมัครใช้งาน (สิทธิ์เริ่มต้น: ดูอย่างเดียว)</button>
+  </div>
+</div>
+<div id="cloud-modal" class="modal-overlay"><div class="modal modal-wide" style="max-width:460px"><h2>☁️ คลาวด์ / บัญชี</h2>
+  <div class="modal-form"><div class="modal-body"><div id="cloud-info"></div></div>
+  <div class="modal-footer modal-footer-sticky" style="flex-wrap:wrap">
+    <button class="btn-cancel" onclick="closeCloud()">ปิด</button>
+    <span id="cloud-admin"><button class="btn-secondary" onclick="openUsers()">👥 จัดการผู้ใช้</button> <button class="btn-secondary" onclick="cloudForceUpload()">⬆️ อัปโหลดทับ</button></span>
+    <button class="btn-secondary" onclick="cloudSyncNow()">🔄 ซิงก์ตอนนี้</button>
+    <button class="btn-primary" onclick="cloudLogout()">ออกจากระบบ</button>
+  </div></div></div></div>
+<div id="users-modal" class="modal-overlay"><div class="modal modal-wide" style="max-width:560px"><h2>👥 จัดการผู้ใช้และสิทธิ์</h2>
+  <div class="modal-form"><div class="modal-body"><div class="op-help">ผู้สมัครใหม่จะเป็น “ดูอย่างเดียว” — เลือก “แก้ไขได้” ให้เฉพาะคนที่ต้องบันทึกงาน</div><div id="users-list"></div></div>
+  <div class="modal-footer modal-footer-sticky"><button class="btn-cancel" onclick="document.getElementById('users-modal').classList.remove('open')">ปิด</button><button class="btn-primary" onclick="saveUsers()">💾 บันทึกสิทธิ์</button></div></div></div></div>
+</body>
+</html>

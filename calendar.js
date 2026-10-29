@@ -1,0 +1,302 @@
+'use strict';
+// ── Smart O&M Calendar + Resource Planning + Team mail ───────────
+const OP_KEY = 'greenergy_operator_dir_v1';
+const DAYMS = 864e5;
+let calMonth = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })();
+// สมุดรายชื่อ Operator: อีเมลของแต่ละคน (หลายอีเมลต่อคนได้) + อีเมลผู้ส่ง (Organizer)
+let opDir = { emails: {}, organizer: '', flowUrl: '', autoSend: false, sent: {} };
+try { const d = JSON.parse(localStorage.getItem(OP_KEY) || 'null'); if (d && typeof d === 'object') opDir = Object.assign(opDir, { emails: d.emails || {}, organizer: d.organizer || '', flowUrl: d.flowUrl || '', autoSend: !!d.autoSend, sent: d.sent || {} }); } catch (e) {}
+function opSaveDir() { try { localStorage.setItem(OP_KEY, JSON.stringify(opDir)); } catch (e) {} }
+
+const dparse = s => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? Date.UTC(+m[1], +m[2]-1, +m[3]) : null; };
+const dfmt = t => { const d = new Date(t); return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0'); };
+
+// รวมงานจาก Plan PM&AN (AN / PPM) + งานทั่วไปจากบันทึกงาน (ไม่รวมรายการที่เคยซิงก์จาก PM&AN กันซ้ำ)
+function calItems() {
+  const out = [];
+  (ppmRecords || []).forEach(r => {
+    const s = dparse(r.start); if (s == null) return;
+    let e = dparse(r.end); if (e == null || e < s) e = s + Math.max(0, (+r.days || 1) - 1) * DAYMS;
+    out.push({ src:'ppm', id:r.pid, start:s, end:e, project:r.plant||'', activity:r.activity||'', team:r.team||'', ops:opsOf(r), op:opsOf(r).join(', '), kind:r.type==='AN'?'an':'ppm', label:r.type||'PPM' });
+  });
+  (records || []).forEach(r => {
+    if (r.ppmPid != null) return;
+    const s = dparse(r.plan) ?? dparse(r.date); if (s == null) return;          // วันเริ่มในปฏิทิน = Plan (ถ้าไม่มีใช้ Start)
+    let e = dparse(r.finish); if (e == null || e < s) e = s;
+    out.push({ src:'job', id:r.id, start:s, end:e, project:r.project||'', activity:(r.jobDescriptions&&r.jobDescriptions[0])||r.typeOfWork||'', team:'', ops:opsOf(r), op:opsOf(r).join(', '), kind:'gen', label:r.typeOfWork||'งานทั่วไป' });
+  });
+  return out;
+}
+function calTeamSel() { return ($('cal-team') || {}).value || ''; }
+function calOpSel() { return ($('cal-op') || {}).value || ''; }
+function calFilteredItems() { const t = calTeamSel(), o = calOpSel(); return calItems().filter(i => (!t || i.team === t) && (!o || i.ops.includes(o))); }
+function calFillTeams() {
+  const all = calItems(), ct = calTeamSel(), co = calOpSel();
+  const teams = uniq(all.map(i => i.team)).sort(), ops = uniq(all.flatMap(i => i.ops)).sort();
+  $('cal-team').innerHTML = '<option value="">ทุก Subcontractor</option>' + teams.map(t => `<option${t===ct?' selected':''}>${esc(t)}</option>`).join('');
+  $('cal-op').innerHTML = '<option value="">ทุก Operator</option>' + ops.map(t => `<option${t===co?' selected':''}>${esc(t)}</option>`).join('');
+}
+function calNav(d) {
+  calMonth = d === 0 ? (() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); })() : new Date(calMonth.getFullYear(), calMonth.getMonth() + d, 1);
+  renderCalendar();
+}
+function renderCalendar() {
+  if (!$('cal-grid')) return;
+  calFillTeams();
+  const y = calMonth.getFullYear(), m = calMonth.getMonth(), first = Date.UTC(y, m, 1);
+  const dim = new Date(y, m + 1, 0).getDate(), dow = new Date(y, m, 1).getDay(), weeks = Math.ceil((dow + dim) / 7);
+  const gs = first - dow * DAYMS, items = calFilteredItems(), todayT = dparse(today());
+  $('cal-title').textContent = `${MONTHS[m+1]} ${y}`;
+  let h = '';
+  for (let i = 0; i < weeks * 7; i++) {
+    const t = gs + i * DAYMS, d = new Date(t), inM = d.getUTCMonth() === m, wk = d.getUTCDay() === 0 || d.getUTCDay() === 6;
+    const day = items.filter(it => it.start <= t && t <= it.end);
+    h += `<div class="cal-cell${inM?'':' out'}${wk?' wkend':''}${t===todayT?' today':''}" data-day="${t}">
+      <div class="cal-dn">${d.getUTCDate()}${day.length?`<span class="cal-cnt">${day.length}</span>`:''}</div>
+      <div class="cal-items">${day.map(it => `<div class="cal-chip k-${it.kind}" draggable="true" data-src="${it.src}" data-id="${it.id}" data-day="${t}"
+        title="${esc(it.label+' • '+it.project+' • '+it.activity+' • Operator: '+(it.op||'-')+' • Subcontractor: '+(it.team||'-')+' • '+dfmt(it.start)+' → '+dfmt(it.end))}">
+        <b>${t>it.start?'◂ ':''}${esc(it.project)}</b><span>${esc(it.activity)}</span><em>${it.op?'👤 '+esc(it.op):'⚠ ไม่ระบุ Operator'}</em></div>`).join('')}</div></div>`;
+  }
+  $('cal-grid').innerHTML = h;
+  renderResource(items, y, m, dim);
+}
+function renderResource(items, y, m, dim) {
+  const first = Date.UTC(y, m, 1), last = first + (dim - 1) * DAYMS;
+  const mi = items.filter(i => i.end >= first && i.start <= last);
+  const by = ($('cal-res-by') || {}).value || 'team', keys = i => by === 'op' ? (i.ops.length ? i.ops : ['(ไม่ระบุ Operator)']) : [i.team || '(ไม่ระบุทีม)'];
+  const teams = uniq(mi.flatMap(keys)).sort();
+  if (!teams.length) { $('cal-res').innerHTML = '<div class="empty">ไม่มีงานในเดือนนี้</div>'; return; }
+  let head = `<tr><th class="rs-team">${by === 'op' ? 'Operator' : 'Subcontractor'}</th>`;
+  for (let d = 1; d <= dim; d++) { const w = new Date(y, m, d).getDay(); head += `<th class="${w===0||w===6?'wk':''}">${d}</th>`; }
+  head += '<th>งาน</th><th>วันที่มีงาน</th><th>Utilization</th></tr>';
+  const rows = teams.map(tm => {
+    const its = mi.filter(i => keys(i).includes(tm)); let busy = 0, cells = '';
+    for (let d = 1; d <= dim; d++) {
+      const t = Date.UTC(y, m, d), on = its.filter(i => i.start <= t && t <= i.end), w = new Date(y, m, d).getDay();
+      if (on.length) busy++;
+      cells += `<td class="rs-c${on.length>2?' h3':on.length===2?' h2':on.length?' h1':''}${w===0||w===6?' wk':''}"${on.length?` title="${esc(on.map(i=>i.project+' · '+i.activity).join('\n'))}"`:''}>${on.length||''}</td>`;
+    }
+    return `<tr><td class="rs-team">${esc(tm)}</td>${cells}<td class="rs-s">${its.length}</td><td class="rs-s">${busy}/${dim}</td><td class="rs-s">${Math.round(busy/dim*100)}%</td></tr>`;
+  }).join('');
+  $('cal-res').innerHTML = `<table class="rs-tbl"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+}
+
+// ── Drag & drop: ย้ายทั้งช่วงงาน คงจำนวนวันเดิม ───────────────────
+function calMove(src, id, deltaDays) {
+  if (!deltaDays) return;
+  const sh = s => dfmt(dparse(s) + deltaDays * DAYMS);
+  if (src === 'ppm') {
+    const r = ppmRecords.find(x => String(x.pid) === String(id)); if (!r) return;
+    const s = dparse(r.start); let e = dparse(r.end); if (e == null || e < s) e = s + Math.max(0, (+r.days || 1) - 1) * DAYMS;
+    r.start = dfmt(s + deltaDays * DAYMS); r.end = dfmt(e + deltaDays * DAYMS);
+    r.year = +r.start.slice(0, 4); r.month = +r.start.slice(5, 7);
+    ppmSaveStore();
+  } else {
+    const r = records.find(x => String(x.id) === String(id)); if (!r) return;
+    r.date = sh(r.date); if (r.plan) r.plan = sh(r.plan); if (r.finish) r.finish = sh(r.finish);
+    save();
+  }
+  toast(`ย้ายงาน ${deltaDays > 0 ? '+' : ''}${deltaDays} วัน (จำนวนวันเดิมคงเดิม)`);
+  renderCalendar();
+}
+document.addEventListener('dragstart', e => {
+  const c = e.target.closest && e.target.closest('.cal-chip'); if (!c) return;
+  e.dataTransfer.setData('text/plain', JSON.stringify({ src: c.dataset.src, id: c.dataset.id, day: +c.dataset.day }));
+  e.dataTransfer.effectAllowed = 'move'; c.classList.add('dragging');
+});
+document.addEventListener('dragend', () => { document.querySelectorAll('.dragging,.dragover').forEach(x => x.classList.remove('dragging', 'dragover')); });
+document.addEventListener('dragover', e => { const c = e.target.closest && e.target.closest('.cal-cell'); if (!c) return; e.preventDefault(); document.querySelectorAll('.dragover').forEach(x => x !== c && x.classList.remove('dragover')); c.classList.add('dragover'); });
+document.addEventListener('drop', e => {
+  const c = e.target.closest && e.target.closest('.cal-cell'); if (!c) return; e.preventDefault();
+  try { const d = JSON.parse(e.dataTransfer.getData('text/plain')); calMove(d.src, d.id, Math.round((+c.dataset.day - d.day) / DAYMS)); } catch (err) {}
+});
+
+// ── คลิกงานในปฏิทิน: ดูรายละเอียด / แก้ไข / ลบ ─────────────────────
+let calSel = null;
+document.addEventListener('click', e => {
+  const c = e.target.closest && e.target.closest('.cal-chip'); if (c) calShowItem(c.dataset.src, c.dataset.id);
+});
+function calShowItem(src, id) {
+  const row = (k, v) => `<div class="cd-k">${k}</div><div class="cd-v">${v ? esc(v) : '<span style="color:#ccc">–</span>'}</div>`;
+  let h = '';
+  if (src === 'ppm') {
+    const r = ppmRecords.find(x => String(x.pid) === String(id)); if (!r) return;
+    calSel = { src, id: r.pid, ops: opsOf(r) };
+    $('cd-title').textContent = `🔧 ${r.type || 'PM&AN'} — ${r.plant}`;
+    h = row('Project', r.plant) + row('Owner', r.owner) + row('Project Type', r.ptype) + row('Activity', r.activity) + row('Round', r.round) +
+      row('Start → END', `${r.start || '-'} → ${r.end || '-'}  (${r.days || 0} วัน)`) + row('สถานะ', ppmStatusOf(r)) + row('Progress', Math.round((r.progress||0)*100) + '%') +
+      row('BOQ / Actual (฿)', `${Math.round(r.budget||0).toLocaleString()} / ${Math.round(r.actual||0).toLocaleString()}`) + row('Subcontractor', r.team) + row('Operator', opsOf(r).join(', ')) + row('Remark', r.remark);
+  } else {
+    const r = records.find(x => String(x.id) === String(id)); if (!r) return;
+    calSel = { src, id: r.id, ops: opsOf(r) };
+    $('cd-title').textContent = `📋 ${r.typeOfWork || 'งานทั่วไป'} — ${r.project}`;
+    h = row('Project', r.project) + row('Owner', r.owner) + row('Type of work', r.typeOfWork) + row('Job Description', (r.jobDescriptions||[]).join(', ')) +
+      row('Detail', (r.details||[]).join('\n')) + row('Plan (วันเริ่มในปฏิทิน)', r.plan) + row('Start → Finish', `${r.date || '-'} → ${r.finish || '-'}`) + row('Operator', opsOf(r).join(', ')) +
+      row('Priority / สถานะ', `${r.priority} / ${r.status}`) + row('SLA', slaEffective(r)) + row('Report#', r.report);
+  }
+  $('cd-body').innerHTML = h + calSendBlock(); $('cal-detail').classList.add('open');
+}
+function closeCalDetail() { $('cal-detail').classList.remove('open'); }
+function calDetailEdit() { const s = calSel; closeCalDetail(); if (!s) return; if (s.src === 'ppm') openEditPpm(s.id); else openEdit(s.id); }
+function calDetailDel() {
+  const s = calSel; if (!s) return;
+  if (s.src === 'ppm') { if (!confirm('ต้องการลบงานนี้?')) return; ppmRecords = ppmRecords.filter(p => p.pid !== s.id); ppmSaveStore(); planpmInit(); }
+  else { if (!confirm('ต้องการลบรายการนี้?')) return; records = records.filter(r => r.id !== s.id); save(); }
+  closeCalDetail(); renderCalendar();
+}
+
+// ═══ ช่อง Operator หลายคน (ใช้ทั้งฟอร์มบันทึกงานและ PM&AN) ═══════════
+function opPickList() { return uniq([...(options.operator || []), ...(options.ppmOperator || [])]).filter(Boolean).sort((a, b) => a.localeCompare(b, 'th')); }
+function opsRegister(names) { (names || []).forEach(n => { if (!n) return; ['operator', 'ppmOperator'].forEach(k => { if (!Array.isArray(options[k])) options[k] = []; if (!options[k].includes(n)) options[k].push(n); }); }); saveOpts(); }
+let opsSeq = 0;
+function opsFill(sel, cur) { const l = opPickList(); if (cur && !l.includes(cur)) l.unshift(cur); sel.innerHTML = '<option value="">— เลือก Operator —</option>' + l.map(v => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join(''); }
+function opsInit(cid, names) {
+  const box = $(cid); if (!box) return;
+  box.innerHTML = `<div class="ops-rows"></div><div class="ops-actions"><button type="button" class="btn-add-jd" onclick="opsAdd('${cid}')">＋ เพิ่มช่อง Operator</button><a class="ops-link" onclick="opOpen()">✉️ อีเมล / เชื่อม Outlook-Teams</a></div>`;
+  (names && names.length ? names : ['']).forEach(n => opsAdd(cid, n));
+}
+function opsAdd(cid, name) {
+  const id = 'ops-' + (++opsSeq), d = document.createElement('div'); d.className = 'opt-row ops-row';
+  d.innerHTML = `<select class="ops-sel" id="${id}"></select><button type="button" class="btn-add-opt" title="เพิ่มชื่อ Operator ใหม่ในรายการ" onclick="opsNewName('${id}')">＋</button><button type="button" class="btn-del-opt" title="ลบชื่อที่เลือกออกจากรายการ" onclick="opsDelName('${id}')">🗑</button><button type="button" class="ops-rm" title="ลบช่องนี้" onclick="opsRm(this)">➖</button>`;
+  $(cid).querySelector('.ops-rows').appendChild(d); opsFill($(id), name || '');
+}
+function opsRm(btn) { const row = btn.closest('.ops-row'); if (row.parentNode.children.length > 1) row.remove(); }
+function opsGet(cid) { const b = $(cid); return b ? uniq([...b.querySelectorAll('.ops-sel')].map(x => x.value).filter(Boolean)) : []; }
+function opsRefreshAll(originId, originVal) { document.querySelectorAll('.ops-sel').forEach(x => opsFill(x, x.id === originId ? originVal : x.value)); }
+function opsNewName(id) { const n = (prompt('➕ เพิ่มชื่อ Operator ใหม่:') || '').trim(); if (!n) return; opsRegister([n]); opsRefreshAll(id, n); }
+function opsDelName(id) {
+  const v = $(id).value; if (!v) return;
+  if (!confirm(`ลบ "${v}" ออกจากรายการ Operator?\n(งานเดิมที่ใช้ชื่อนี้จะยังคงอยู่)`)) return;
+  ['operator', 'ppmOperator'].forEach(k => { options[k] = (options[k] || []).filter(x => x !== v); }); saveOpts(); opsRefreshAll(id, '');
+}
+
+// ═══ ส่งงานเข้า Outlook / Teams ของ Operator ═══════════════════════
+const parseEmails = txt => { const seen = new Set(), ok = [], bad = []; String(txt || '').split(/[\s,;]+/).map(x => x.trim()).filter(Boolean).forEach(x => { const k = x.toLowerCase(); if (seen.has(k)) return; seen.add(k); (/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(x) ? ok : bad).push(x); }); return { ok, bad }; };
+const opEmails = name => parseEmails((opDir.emails || {})[name]).ok;
+const opsEmails = names => uniq((names || []).flatMap(opEmails));
+const tzOff = () => { const m = -new Date().getTimezoneOffset(), a = Math.abs(m); return (m >= 0 ? '+' : '-') + String(Math.floor(a / 60)).padStart(2, '0') + ':' + String(a % 60).padStart(2, '0'); };
+const tzIso = (d, hhmm) => `${d}T${hhmm}:00${tzOff()}`;
+function calEventOf(src, id) {
+  const it = calItems().find(i => i.src === src && String(i.id) === String(id)); if (!it) return null;
+  const desc = [`Operator: ${it.ops.join(', ') || '-'}`, `ประเภท: ${it.label}`, `ช่วงงาน: ${dfmt(it.start)} – ${dfmt(it.end)}`];
+  if (src === 'ppm') { const r = ppmRecords.find(x => String(x.pid) === String(id)) || {}; desc.push(`Subcontractor: ${r.team || '-'}`, `Round: ${r.round || '-'}`, `สถานะ: ${ppmStatusOf(r)} (${Math.round((r.progress||0)*100)}%)`); if (r.remark) desc.push(`หมายเหตุ: ${r.remark}`); }
+  else { const r = records.find(x => String(x.id) === String(id)) || {}; desc.push(`Owner: ${r.owner || '-'}`, `Priority: ${r.priority || '-'}`, ...(r.details && r.details.length ? ['รายละเอียด: ' + r.details.join(' / ')] : [])); }
+  return { it, title: `[${it.label}] ${it.project}${it.activity ? ' — ' + it.activity : ''}`, desc: desc.join('\n'), loc: it.project, uid: `${src}-${id}@greenergy-om` };
+}
+const ymd = t => dfmt(t).replace(/-/g, '');
+function calSendBlock() {
+  const ops = (calSel && calSel.ops) || [];
+  if (!ops.length) return '<div class="cd-send warn">⚠️ งานนี้ยังไม่ระบุ Operator — กด “แก้ไข” เพื่อเลือก Operator ก่อน จึงจะส่งเข้า Calendar ได้</div>';
+  const info = ops.map(n => ({ n, em: opEmails(n) })), have = info.filter(x => x.em.length), miss = info.filter(x => !x.em.length);
+  const ev = calEventOf(calSel.src, calSel.id), sent = ev && opDir.sent && opDir.sent[ev.uid];
+  let h = `<div class="cd-send"><div class="cd-send-h">📅 มอบหมายงานเข้า Outlook / Teams Calendar ของ: ${info.map(x => `<b>${esc(x.n)}</b>${x.em.length ? ` <small>(${esc(x.em.join(', '))})</small>` : ' <small style="color:#b00">ไม่มีอีเมล</small>'}`).join(' • ')}</div>`;
+  if (miss.length) h += `<button class="btn-secondary" onclick="opOpen(${esc(JSON.stringify(miss[0].n)).replace(/"/g, '&quot;')})">＋ เพิ่มอีเมลของ ${esc(miss.map(x => x.n).join(', '))}</button>`;
+  if (have.length) h += `<button class="btn-primary" onclick="calSendTo('flow')" title="${opDir.flowUrl ? 'ส่งผ่าน Power Automate ไปสร้างนัดหมายใน Outlook/Teams' : 'ยังไม่ได้ตั้งค่า Flow URL'}">⚡ ส่งเข้า Outlook/Teams ทันที</button>
+    <button class="btn-secondary" onclick="calSendTo('outlook')">Outlook (เว็บ)</button><button class="btn-secondary" onclick="calSendTo('teams')">Teams</button><button class="btn-secondary" onclick="calSendTo('google')">Google</button><button class="btn-secondary" onclick="calSendTo('ics')">⬇️ .ics</button>`;
+  if (!opDir.flowUrl && have.length) h += `<div class="cd-sub">ส่งทันทีได้เมื่อตั้งค่า Power Automate (กด “เพิ่มอีเมล…” หรือเปิดจากฟอร์ม → ✉️ อีเมล / เชื่อม Outlook-Teams)</div>`;
+  if (sent) h += `<div class="cd-sub ok">✓ ส่งคำสั่งเข้า Outlook/Teams แล้วเมื่อ ${esc(new Date(sent).toLocaleString('th-TH'))}</div>`;
+  return h + '</div>';
+}
+async function flowSend(ev, quiet) {
+  const url = opDir.flowUrl; if (!url) { if (!quiet) { alert('ยังไม่ได้ตั้งค่า Flow URL (Power Automate)'); opOpen(); } return false; }
+  const ops = ev.it.ops, em = opsEmails(ops); if (!em.length) { if (!quiet) alert('ยังไม่มีอีเมลของ Operator'); return false; }
+  if (!quiet && opDir.sent && opDir.sent[ev.uid] && !confirm('งานนี้เคยส่งเข้า Calendar แล้ว ส่งซ้ำจะเกิดนัดหมายซ้ำ ต้องการส่งอีกครั้งหรือไม่?')) return false;
+  const s = dfmt(ev.it.start), e = dfmt(ev.it.end);
+  const payload = { action: 'create', uid: ev.uid, title: ev.title, description: ev.desc, location: ev.loc, project: ev.it.project, activity: ev.it.activity, kind: ev.it.label, operators: ops, attendees: em, attendeesText: em.join(';'), organizer: opDir.organizer,
+    allDay: true, start: s, end: e, endExclusive: dfmt(ev.it.end + DAYMS), startDateTime: tzIso(s, '08:00'), endDateTime: tzIso(e, '17:00'), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+  try {
+    await fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(payload) });
+    opDir.sent = opDir.sent || {}; opDir.sent[ev.uid] = new Date().toISOString(); opSaveDir();
+    toast(`ส่งงานให้ ${ops.join(', ')} เข้า Outlook/Teams แล้ว (ตรวจสอบใน Calendar / ประวัติการรัน Flow)`); return true;
+  } catch (err) { alert('ส่งไม่สำเร็จ: ' + err.message); return false; }
+}
+function opAfterSave(src, id) {        // มอบหมายงานใหม่ → ส่งอัตโนมัติ (ถ้าเปิดใช้)
+  if (!(opDir.autoSend && opDir.flowUrl)) return;
+  setTimeout(() => {
+    const ev = calEventOf(src, id); if (!ev || !ev.it.ops.length) return;
+    if (!opsEmails(ev.it.ops).length) { toast('มอบหมายแล้ว แต่ Operator ยังไม่มีอีเมล — ยังไม่ส่งเข้า Calendar'); return; }
+    flowSend(ev, true);
+  }, 60);
+}
+function calSendTo(kind) {
+  const ev = calSel && calEventOf(calSel.src, calSel.id); if (!ev) return;
+  const em = opsEmails(ev.it.ops), q = encodeURIComponent, s = dfmt(ev.it.start), e = dfmt(ev.it.end), endEx = dfmt(ev.it.end + DAYMS);
+  if (!em.length) { alert('ยังไม่มีอีเมลของ Operator'); return; }
+  if (kind === 'flow') flowSend(ev, false).then(() => { if (calSel) { const b = document.querySelector('#cd-body .cd-send'); if (b) b.outerHTML = calSendBlock(); } });
+  else if (kind === 'google') window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${q(ev.title)}&dates=${ymd(ev.it.start)}/${ymd(ev.it.end + DAYMS)}&details=${q(ev.desc)}&location=${q(ev.loc)}&add=${q(em.join(','))}`, '_blank');
+  else if (kind === 'outlook') window.open(`https://outlook.office.com/calendar/0/deeplink/compose?path=%2Fcalendar%2Faction%2Fcompose&rru=addevent&allday=true&subject=${q(ev.title)}&startdt=${s}&enddt=${endEx}&body=${q(ev.desc)}&location=${q(ev.loc)}&to=${q(em.join(','))}`, '_blank');
+  else if (kind === 'teams') window.open(`https://teams.microsoft.com/l/meeting/new?subject=${q(ev.title)}&attendees=${q(em.join(','))}&startTime=${q(tzIso(s, '08:00'))}&endTime=${q(tzIso(e, '17:00'))}&content=${q(ev.desc)}`, '_blank');
+  else calDownloadICS([ev], ev.it.ops, `${ev.it.ops.join('+')}_${s}`);
+}
+function icsEsc(t) { return String(t).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
+function icsFold(line) {
+  const enc = new TextEncoder(); let out = '', cur = '', bytes = 0;
+  for (const ch of line) { const b = enc.encode(ch).length; if (bytes + b > 73) { out += cur + '\r\n '; cur = ''; bytes = 1; } cur += ch; bytes += b; }
+  return out + cur;
+}
+function calDownloadICS(events, opNames, fname) {
+  const org = parseEmails(opDir.organizer).ok[0] || '', now = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Greenergy O&M//TH', 'CALSCALE:GREGORIAN', org ? 'METHOD:REQUEST' : 'METHOD:PUBLISH'];
+  events.forEach(ev => {
+    L.push('BEGIN:VEVENT', `UID:${ev.uid}`, `DTSTAMP:${now}`, `DTSTART;VALUE=DATE:${ymd(ev.it.start)}`, `DTEND;VALUE=DATE:${ymd(ev.it.end + DAYMS)}`,
+      `SUMMARY:${icsEsc(ev.title)}`, `DESCRIPTION:${icsEsc(ev.desc)}`, `LOCATION:${icsEsc(ev.loc)}`, 'STATUS:CONFIRMED', 'TRANSP:TRANSPARENT');
+    if (org) { L.push(`ORGANIZER:mailto:${org}`); ev.it.ops.forEach(n => opEmails(n).forEach(e => L.push(`ATTENDEE;CN=${icsEsc(n)};ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:${e}`))); }
+    L.push('BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', `DESCRIPTION:${icsEsc(ev.title)}`, 'END:VALARM', 'END:VEVENT');
+  });
+  L.push('END:VCALENDAR');
+  const blob = new Blob([L.map(icsFold).join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' }), a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = fname.replace(/[\\/:*?"<>|\s]+/g, '_') + '.ics'; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function opMonthEvents(name) {
+  const y = calMonth.getFullYear(), m = calMonth.getMonth(), f = Date.UTC(y, m, 1), l = Date.UTC(y, m + 1, 0);
+  return calItems().filter(i => i.ops.includes(name) && i.end >= f && i.start <= l).map(i => calEventOf(i.src, i.id));
+}
+
+// ── จัดการรายชื่อ Operator & อีเมล & การเชื่อมต่อ ────────────────────
+function opNames() {
+  return uniq([...(options.operator || []), ...(options.ppmOperator || []), ...records.flatMap(opsOf), ...(ppmRecords || []).flatMap(opsOf), ...Object.keys(opDir.emails || {})]).filter(Boolean).sort((a, b) => a.localeCompare(b, 'th'));
+}
+function opRender() {
+  const mm = `${MONTHS[calMonth.getMonth()+1]} ${calMonth.getFullYear()}`;
+  $('op-org').value = opDir.organizer || ''; $('op-flow').value = opDir.flowUrl || ''; $('op-auto').checked = !!opDir.autoSend;
+  $('op-list').innerHTML = `<table class="mini op-tbl"><thead><tr><th>Operator</th><th>อีเมล (หลายอีเมลคั่นด้วย , )</th><th>งาน ${esc(mm)}</th><th></th></tr></thead><tbody>` +
+    opNames().map(n => { const c = opMonthEvents(n).length; return `<tr data-n="${esc(n)}"><td><b>${esc(n)}</b></td><td><input type="text" class="op-em" value="${esc((opDir.emails||{})[n] || '')}" placeholder="name@company.com"></td><td class="n">${c}</td><td><button class="btn-secondary" ${c ? '' : 'disabled'} onclick="opSendMonth(this)">📅 ส่งงานเดือนนี้ (.ics)</button></td></tr>`; }).join('') + '</tbody></table>';
+}
+function opOpen(focusName) { closeCalDetail(); opRender(); $('op-modal').classList.add('open'); if (focusName) { const r = [...document.querySelectorAll('#op-list tr[data-n]')].find(x => x.dataset.n === focusName); if (r) r.querySelector('input').focus(); } }
+function closeOp() { $('op-modal').classList.remove('open'); }
+function opSave(quiet) {
+  const bad = [], emails = {};
+  document.querySelectorAll('#op-list tr[data-n]').forEach(tr => { const r = parseEmails(tr.querySelector('input').value); if (r.bad.length) bad.push(`${tr.dataset.n}: ${r.bad.join(', ')}`); if (r.ok.length) emails[tr.dataset.n] = r.ok.join(', '); });
+  const org = parseEmails($('op-org').value), flow = $('op-flow').value.trim();
+  if (bad.length || org.bad.length) { alert('อีเมลรูปแบบไม่ถูกต้อง:\n' + [...bad, ...org.bad].join('\n')); return false; }
+  if (flow && !/^https:\/\//i.test(flow)) { alert('Flow URL ต้องขึ้นต้นด้วย https://'); return false; }
+  opDir = { emails, organizer: org.ok[0] || '', flowUrl: flow, autoSend: $('op-auto').checked && !!flow, sent: opDir.sent || {} }; opSaveDir();
+  if (!quiet) { toast('บันทึกการตั้งค่า Operator แล้ว'); closeOp(); renderCalendar(); }
+  return true;
+}
+function opAddPerson() {
+  const n = $('op-new-name').value.trim(), e = parseEmails($('op-new-email').value);
+  if (!n) { alert('กรุณาใส่ชื่อ Operator'); return; }
+  if (e.bad.length) { alert('อีเมลไม่ถูกต้อง: ' + e.bad.join(', ')); return; }
+  opSave(true); opsRegister([n]);
+  if (e.ok.length) { opDir.emails[n] = e.ok.join(', '); opSaveDir(); }
+  $('op-new-name').value = ''; $('op-new-email').value = ''; opRender();
+}
+function opSendMonth(btn) {
+  const n = btn.closest('tr').dataset.n; if (!opSave(true)) return;
+  if (!opEmails(n).length) { alert(`กรุณาใส่อีเมลของ ${n} ก่อน`); return; }
+  const evs = opMonthEvents(n); if (!evs.length) return;
+  calDownloadICS(evs, [n], `${n}_${calMonth.getFullYear()}-${String(calMonth.getMonth()+1).padStart(2,'0')}`);
+  toast(`สร้างไฟล์ .ics ${evs.length} งานของ ${n}`);
+}
+async function opTestFlow() {
+  if (!opSave(true)) return; if (!opDir.flowUrl) { alert('กรุณาใส่ Flow URL ก่อน'); return; }
+  const to = parseEmails($('op-org').value).ok.length ? parseEmails($('op-org').value).ok : uniq(Object.values(opDir.emails).flatMap(x => parseEmails(x).ok)).slice(0, 1);
+  if (!to.length) { alert('ใส่อีเมลผู้ส่ง (Organizer) หรืออีเมล Operator อย่างน้อย 1 รายการเพื่อใช้ทดสอบ'); return; }
+  const d = today(), now = Date.UTC(+d.slice(0,4), +d.slice(5,7)-1, +d.slice(8,10));
+  const ev = { it: { ops: ['ทดสอบ'], project: 'ทดสอบระบบ', activity: 'ทดสอบส่งเข้า Calendar', label: 'TEST', start: now, end: now }, title: '[TEST] ทดสอบส่งเข้า Calendar จาก Greenergy O&M', desc: 'ข้อความทดสอบ — ลบนัดหมายนี้ได้', loc: '', uid: 'test-' + Date.now() };
+  const keep = opDir.emails['ทดสอบ']; opDir.emails['ทดสอบ'] = to.join(', ');
+  const ok = await flowSend(ev, true); if (keep === undefined) delete opDir.emails['ทดสอบ']; else opDir.emails['ทดสอบ'] = keep; delete (opDir.sent || {})[ev.uid]; opSaveDir();
+  if (ok) alert('ส่งคำสั่งทดสอบแล้ว — ตรวจสอบ Calendar ของ ' + to.join(', ') + ' (หรือประวัติการรันใน Power Automate) ภายใน 1–2 นาที');
+}

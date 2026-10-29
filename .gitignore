@@ -1,0 +1,5 @@
+# ห้ามนำไฟล์สำรองข้อมูล/ข้อมูลจริงขึ้น GitHub
+*.json
+*.rar
+*.zip
+Greenergy_backup*
