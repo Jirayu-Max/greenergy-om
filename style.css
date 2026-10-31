@@ -967,3 +967,4 @@ body[data-tab="staff"] .content { max-width: 1500px; }
 .st-tenure-box { padding: 9px 12px; border-radius: 8px; background: #eef4f0; color: #2a5444; font-weight: 700; border: 1px solid #d5e3da; }
 .st-note { margin-top: 14px; font-size: 12.5px; color: #6b6b6b; background: #faf8f3; border: 1px dashed #e0d6c2; border-radius: 8px; padding: 8px 12px; }
 @media (max-width: 640px) { .st-form { flex-direction: column; align-items: stretch; } .st-photo-col { flex: none; } .st-grid { padding: 10px; } }
+.st-en { font-size: 12px; color: #7d8b84; letter-spacing: .2px; }

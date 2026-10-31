@@ -18,7 +18,7 @@ const COL = {
   projects: { idKey: 'pid', get: () => pjRecords, set: v => { pjRecords = v.map(pjMigrate); nextPid = Math.max(0, ...pjRecords.map(p => p.pid || 0)) + 1; _orig.pjSave(); }, empty: v => !v.length },
   options:  { get: () => options, set: v => { options = v; ['typeOfWork','project','owner','operator','jobDescriptions','priority','status','report'].forEach(k => { if (!Array.isArray(options[k])) options[k] = []; }); _orig.saveOpts(); } },
   opdir:    { get: () => ({ emails: opDir.emails || {}, organizer: opDir.organizer || '', sent: opDir.sent || {} }), set: v => { opDir.emails = v.emails || {}; opDir.organizer = v.organizer || ''; opDir.sent = v.sent || {}; _orig.opSaveDir(); } },
-  staff:    { idKey: 'sid', get: () => staff, set: v => { staff = v; staffNextId = Math.max(0, ...staff.map(s => s.sid || 0)) + 1; _orig.staffSave(); }, empty: v => !v.length },
+  staff:    { idKey: 'sid', get: () => staff, set: v => { staff = v.map(staffNorm); staffNextId = Math.max(0, ...staff.map(s => s.sid || 0)) + 1; _orig.staffSave(); }, empty: v => !v.length },
   flow:     { get: () => ({ flowUrl: opDir.flowUrl || '', autoSend: !!opDir.autoSend }), set: v => { opDir.flowUrl = v.flowUrl || ''; opDir.autoSend = !!v.autoSend; _orig.opSaveDir(); }, secret: true },   // อ่านได้เฉพาะผู้แก้ไข (RLS)
 };
 const KEYMAP = { save: ['records'], ppmSaveStore: ['ppm'], pjSave: ['projects'], saveOpts: ['options'], opSaveDir: ['opdir', 'flow'], staffSave: ['staff'] };

@@ -741,7 +741,7 @@ function importJSON() {
         if (data.workplan) localStorage.setItem(WPKEY, JSON.stringify(data.workplan));   // เก็บข้อมูลเดิมไว้ (หน้าถูกนำออกแล้ว)
         if (Array.isArray(data.holidays)) localStorage.setItem(HDKEY, JSON.stringify(data.holidays));
         if (data.operatorDir && typeof data.operatorDir==='object' && typeof opSaveDir==='function') { opDir = Object.assign({ emails:{}, organizer:'', flowUrl:'', autoSend:false, sent:{} }, data.operatorDir); opSaveDir(); }
-        if (Array.isArray(data.staff)) { staff = data.staff; staffNextId = Math.max(0, ...staff.map(s => s.sid || 0)) + 1; staffSave(); }
+        if (Array.isArray(data.staff)) { staff = data.staff.map(staffNorm); staffNextId = Math.max(0, ...staff.map(s => s.sid || 0)) + 1; staffSave(); }
         if (Array.isArray(data.planpm)) { ppmRecords = data.planpm; ppmSaveStore(); planpmInit(); }
         nextId = Math.max(0, ...records.map(r=>r.id))+1;
         save(); initDashDates(); msInitAll(); renderCur(); closeBackup();

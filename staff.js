@@ -2,18 +2,27 @@
 // ═══ รายชื่อพนักงาน (Staff directory) — ใช้เป็นรายการ Operator ของทุกฟอร์ม ═══════════
 const STAFF_KEY = 'greenergy_staff';
 let staff = [], staffNextId = 1, stSrch = '', stTeam = '', stEditId = null, stPhoto = '', stAfter = null;
-try { const d = JSON.parse(localStorage.getItem(STAFF_KEY) || '[]'); if (Array.isArray(d)) staff = d; } catch (e) {}
+// ข้อมูลรุ่นแรกเก็บ "ชื่อ-นามสกุล" ไว้ช่องเดียว (name) → แยกเป็น first / last
+const stT = x => String(x || '').trim();
+function staffNorm(s) {
+  if (!('first' in s)) { const p = stT(s.name).split(/\s+/); s.first = p.shift() || ''; s.last = p.join(' '); }
+  ['first', 'last', 'firstEn', 'lastEn', 'nick'].forEach(k => { s[k] = stT(s[k]); });
+  s.name = [s.first, s.last].filter(Boolean).join(' ');            // ชื่อเต็มภาษาไทย (ใช้ค้นหา/เรียง)
+  return s;
+}
+try { const d = JSON.parse(localStorage.getItem(STAFF_KEY) || '[]'); if (Array.isArray(d)) staff = d.map(staffNorm); } catch (e) {}
 staffNextId = Math.max(0, ...staff.map(s => s.sid || 0)) + 1;
 function staffSave() { try { localStorage.setItem(STAFF_KEY, JSON.stringify(staff)); } catch (e) { alert('บันทึกในเครื่องไม่สำเร็จ (พื้นที่เต็ม?) — ลองใช้รูปที่เล็กลง'); } }
 
-// ชื่อที่ใช้ในช่อง Operator: "ชื่อจริง (ชื่อเล่น)"
-const staffLabel = s => { const n = String(s.name || '').trim(), k = String(s.nick || '').trim(); return n && k ? `${n} (${k})` : (n || k); };
+// ชื่อที่ใช้ในช่อง Operator: "ชื่อจริง (ชื่อเล่น)" — ไม่แสดงนามสกุล
+const staffLabel = s => { const n = stT(s.first), k = stT(s.nick); return n && k ? `${n} (${k})` : (n || k); };
+const staffEn = s => [s.firstEn, s.lastEn].filter(Boolean).join(' ');
 const staffLabels = () => staff.map(staffLabel).filter(Boolean).sort((a, b) => a.localeCompare(b, 'th'));
-// หา staff จากชื่อเดิมที่บันทึกไว้ (ชื่อเล่น / ชื่อจริง / ชื่อแรก / label)
+// หา staff จากชื่อเดิมที่บันทึกไว้ (label / ชื่อเล่น / ชื่อจริง / ชื่อ-นามสกุล / "ชื่อ-นามสกุล (ชื่อเล่น)" ของรุ่นก่อน)
 function staffFind(v) {
-  const t = String(v || '').trim().toLowerCase(); if (!t) return null;
-  const by = f => staff.find(s => f(s) && f(s).toLowerCase() === t);
-  return by(staffLabel) || by(s => String(s.nick || '').trim()) || by(s => String(s.name || '').trim()) || by(s => String(s.name || '').trim().split(/\s+/)[0]) || null;
+  const t = stT(v).toLowerCase(); if (!t) return null;
+  const by = f => staff.find(s => { const x = stT(f(s)); return x && x.toLowerCase() === t; });
+  return by(staffLabel) || by(s => s.nick) || by(s => s.first) || by(s => s.name) || by(s => s.nick && s.name ? `${s.name} (${s.nick})` : '') || by(staffEn) || null;
 }
 const staffResolve = v => { const s = staffFind(v); return s ? staffLabel(s) : v; };
 
@@ -27,14 +36,14 @@ function staffTenure(start) {
 const staffDate = d => { if (!/^\d{4}-\d{2}-\d{2}$/.test(d || '')) return '-'; const [y, m, dd] = d.split('-'); return `${+dd} ${['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][+m - 1]} ${+y + 543}`; };
 const staffInitial = s => (String(s.nick || s.name || '?').trim()[0] || '?').toUpperCase();
 const staffTeamColor = t => (typeof cpTeamColor === 'function' ? cpTeamColor(t) : '#35654E');
-const staffTeams = () => uniq([...staff.map(s => s.team), ...(ppmRecords || []).map(r => r.team)].map(x => String(x || '').trim())).sort((a, b) => a.localeCompare(b, 'th'));
+const staffTeams = () => uniq(staff.map(s => stT(s.team))).sort((a, b) => a.localeCompare(b, 'th'));
 const staffJobs = s => { const l = staffLabel(s); return [...records, ...(ppmRecords || [])].filter(r => opsOf(r).includes(l)).length; };
 
 // ── หน้าแสดงผล ───────────────────────────────────────────────
 function renderStaff() {
-  const tf = $('st-fteam'); if (tf) { const cur = stTeam; tf.innerHTML = '<option value="">ทุกทีม</option>' + staffTeams().map(t => `<option${t === cur ? ' selected' : ''}>${esc(t)}</option>`).join(''); }
+  const tf = $('st-fteam'); if (tf) { if (stTeam && !staffTeams().includes(stTeam)) stTeam = ''; const cur = stTeam; tf.innerHTML = '<option value="">ทุกทีม</option>' + staffTeams().map(t => `<option${t === cur ? ' selected' : ''}>${esc(t)}</option>`).join(''); }
   const q = stSrch.trim().toLowerCase();
-  const list = staff.filter(s => (!stTeam || s.team === stTeam) && (!q || [s.name, s.nick, s.position, s.team, s.phone, s.email].some(x => String(x || '').toLowerCase().includes(q))))
+  const list = staff.filter(s => (!stTeam || s.team === stTeam) && (!q || [s.name, s.nick, staffEn(s), s.position, s.team, s.phone, s.email].some(x => String(x || '').toLowerCase().includes(q))))
     .sort((a, b) => String(a.team || '').localeCompare(String(b.team || ''), 'th') || String(a.name || '').localeCompare(String(b.name || ''), 'th'));
   $('st-count').textContent = `${list.length} / ${staff.length} คน`;
   $('st-total').textContent = staff.length;
@@ -46,7 +55,7 @@ function renderStaff() {
     const c = staffTeamColor(s.team), ten = staffTenure(s.start), jobs = staffJobs(s);
     return `<div class="st-card" onclick="openEditStaff(${s.sid})" style="--tc:${c}">
       <div class="st-top"><div class="st-ph">${s.photo ? `<img src="${s.photo}" alt="">` : `<span>${esc(staffInitial(s))}</span>`}</div>
-        <div class="st-id"><div class="st-name">${esc(s.name || '-')}</div>${s.nick ? `<div class="st-nick">“${esc(s.nick)}”</div>` : ''}<div class="st-pos">${esc(s.position || 'ไม่ระบุตำแหน่ง')}</div>${s.team ? `<span class="st-team">${esc(s.team)}</span>` : ''}</div></div>
+        <div class="st-id"><div class="st-name">${esc(s.name || '-')}</div>${staffEn(s) ? `<div class="st-en">${esc(staffEn(s))}</div>` : ''}${s.nick ? `<div class="st-nick">“${esc(s.nick)}”</div>` : ''}<div class="st-pos">${esc(s.position || 'ไม่ระบุตำแหน่ง')}</div>${s.team ? `<span class="st-team">${esc(s.team)}</span>` : ''}</div></div>
       <div class="st-info">
         <div><i>📞</i>${s.phone ? `<a href="tel:${esc(String(s.phone).replace(/[^\d+]/g, ''))}" onclick="event.stopPropagation()">${esc(s.phone)}</a>` : '<em>-</em>'}</div>
         <div><i>✉️</i>${s.email ? `<a href="mailto:${esc(s.email)}" onclick="event.stopPropagation()">${esc(s.email)}</a>` : '<em>-</em>'}</div>
@@ -66,15 +75,15 @@ function stShowPhoto() { $('st-photo-prev').innerHTML = stPhoto ? `<img src="${s
 function stTenurePreview() { const t = staffTenure($('st-start').value); $('st-tenure').textContent = t || '-'; }
 function openAddStaff(after) {
   stEditId = null; stPhoto = ''; stAfter = after || null; stFillLists();
-  ['st-name', 'st-nick', 'st-pos', 'st-team', 'st-phone', 'st-email', 'st-start'].forEach(id => { $(id).value = ''; });
+  ['st-first', 'st-last', 'st-first-en', 'st-last-en', 'st-nick', 'st-pos', 'st-team', 'st-phone', 'st-email', 'st-start'].forEach(id => { $(id).value = ''; });
   $('st-title').textContent = '➕ เพิ่มพนักงานใหม่'; $('st-del').style.display = 'none'; stShowPhoto(); stTenurePreview();
-  $('st-modal').classList.add('open'); setTimeout(() => $('st-name').focus(), 50);
+  $('st-modal').classList.add('open'); setTimeout(() => $('st-first').focus(), 50);
 }
 
 function openEditStaff(sid) {
   const s = staff.find(x => x.sid === sid); if (!s) return;
   stEditId = sid; stPhoto = s.photo || ''; stAfter = null; stFillLists();
-  $('st-name').value = s.name || ''; $('st-nick').value = s.nick || ''; $('st-pos').value = s.position || ''; $('st-team').value = s.team || '';
+  $('st-first').value = s.first || ''; $('st-last').value = s.last || ''; $('st-first-en').value = s.firstEn || ''; $('st-last-en').value = s.lastEn || ''; $('st-nick').value = s.nick || ''; $('st-pos').value = s.position || ''; $('st-team').value = s.team || '';
   $('st-phone').value = s.phone || ''; $('st-email').value = s.email || ''; $('st-start').value = s.start || '';
   $('st-title').textContent = '✏️ แก้ไขข้อมูลพนักงาน'; $('st-del').style.display = ''; stShowPhoto(); stTenurePreview();
   $('st-modal').classList.add('open');
@@ -104,14 +113,14 @@ function stRelink(oldNames, label) {
   return n;
 }
 function saveStaff() {
-  const v = id => $(id).value.trim(), name = v('st-name'), nick = v('st-nick');
-  if (!name) { alert('กรุณาใส่ชื่อจริง'); $('st-name').focus(); return; }
+  const v = id => $(id).value.trim(), first = v('st-first'), nick = v('st-nick');
+  if (!first) { alert('กรุณาใส่ชื่อจริง'); $('st-first').focus(); return; }
   const email = v('st-email'); if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('รูปแบบอีเมลไม่ถูกต้อง'); $('st-email').focus(); return; }
-  const rec = { name, nick, position: v('st-pos'), team: v('st-team'), phone: v('st-phone'), email, start: v('st-start'), photo: stPhoto };
+  const rec = staffNorm({ first, last: v('st-last'), firstEn: v('st-first-en'), lastEn: v('st-last-en'), nick, position: v('st-pos'), team: v('st-team'), phone: v('st-phone'), email, start: v('st-start'), photo: stPhoto });
   const label = staffLabel(rec);
   if (staff.some(s => s.sid !== stEditId && staffLabel(s) === label)) { alert(`มีชื่อ "${label}" อยู่แล้ว`); return; }
-  let olds = [nick, name];
-  if (stEditId != null) { const i = staff.findIndex(s => s.sid === stEditId), old = staff[i]; olds.push(staffLabel(old), old.nick, old.name); staff[i] = { ...old, ...rec }; }
+  let olds = [nick, first, rec.name, rec.name && nick ? `${rec.name} (${nick})` : ''];
+  if (stEditId != null) { const i = staff.findIndex(s => s.sid === stEditId), old = staff[i]; olds.push(staffLabel(old), old.nick, old.first, old.name, old.name && old.nick ? `${old.name} (${old.nick})` : ''); staff[i] = { ...old, ...rec }; }
   else staff.push({ sid: staffNextId++, ...rec });
   staffSave();
   if (email && typeof opDir !== 'undefined' && opDir.emails && !opDir.emails[label]) { opDir.emails[label] = email; opSaveDir(); }
