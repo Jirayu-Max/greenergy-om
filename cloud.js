@@ -187,7 +187,7 @@ async function saveUsers() {
 // ── เริ่มต้น ─────────────────────────────────────────────────────
 if (CLOUD.on) {
   Object.entries(KEYMAP).forEach(([fn, keys]) => { if (typeof window[fn] !== 'function') return; _orig[fn] = window[fn]; window[fn] = function (...a) { _orig[fn].apply(this, a); keys.forEach(cloudQueue); }; });
-  ['openAdd', 'openEdit', 'del', 'clearPpmSynced', 'addOpt', 'delOpt', 'importJSON', 'openAddProj', 'openEditProj', 'delProj', 'openAddPpm', 'openEditPpm', 'delPpm', 'calMove', 'calWpSet', 'calOpSet', 'woBackfill', 'opSave', 'opAddPerson', 'opsNewName', 'opsDelName', 'calSendTo', 'openAddStaff', 'openEditStaff', 'saveStaff', 'delStaff'].forEach(n => {
+  ['openAdd', 'openEdit', 'del', 'clearPpmSynced', 'addOpt', 'delOpt', 'importJSON', 'openAddProj', 'openEditProj', 'delProj', 'openAddPpm', 'openEditPpm', 'delPpm', 'calMove', 'calWpSet', 'calOpSet', 'woBackfill', 'opSave', 'opAddPerson', 'opsNewName', 'opsDelName', 'calSendTo', 'openAddStaff', 'openEditStaff', 'saveStaff', 'delStaff', 'stImportFile'].forEach(n => {
     if (typeof window[n] !== 'function') return; const f = window[n];
     window[n] = function (...a) { if (!cloudEdit()) { toast('สิทธิ์ดูอย่างเดียว — ไม่สามารถแก้ไขได้'); return; } return f.apply(this, a); };
   });
