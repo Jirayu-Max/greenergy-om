@@ -101,7 +101,8 @@ function cpTableHtml(days, y, m) {
   const opSel = (a, i, cur, extra) => {
     cur = cur ? staffResolve(cur) : cur;
     const l = cur && !opList.includes(cur) ? [cur, ...opList] : opList;
-    return `<select class="cp-opsel${cur ? ' has' : ''}" ${a} data-i="${i}"${dis} onchange="calOpSet(this)"${extra.length ? ` title="รวม: ${esc(extra.join(', '))}"` : ''}><option value="">–</option>${l.map(n => `<option${n === cur ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>${extra.length ? `<small class="cp-more">+${extra.length}</small>` : ''}`;
+    // ชื่อแสดงเป็นข้อความเต็ม (ตัดบรรทัดได้) มี select โปร่งใสทับไว้ให้กดเลือก
+    return `<label class="cp-opbox${cur ? ' has' : ''}"><span class="cp-opname">${cur ? esc(cur) : '–'}</span><select class="cp-opsel" ${a} data-i="${i}"${dis} onchange="calOpSet(this)"${extra.length ? ` title="รวม: ${esc(extra.join(', '))}"` : ''}><option value="">–</option>${l.map(n => `<option${n === cur ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>${extra.length ? `<small class="cp-more">+${extra.length}</small>` : ''}`;
   };
   let body = '', nJobs = 0, nDone = 0, nWp = 0;
   days.forEach(({ d, day, w, rows }) => rows.forEach(({ it, ops, wp }, k) => {
