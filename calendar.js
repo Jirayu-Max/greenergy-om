@@ -78,16 +78,21 @@ function renderCalPlan(items, y, m, dim) {
   document.querySelectorAll('.cal-viewsw button').forEach(b => b.classList.toggle('on', b.dataset.v === calView));
   $('tab-calendar').classList.toggle('cal-is-table', calView === 'table');
   if (calView !== 'table') { box.innerHTML = ''; return; }
+  try { box.innerHTML = cpTableHtml(items, y, m, dim); }
+  catch (err) { box.innerHTML = `<div class="empty" style="color:#c00000">แสดงตารางไม่สำเร็จ: ${esc(err && err.message || err)}</div>`; console.error(err); }
+}
+function cpTableHtml(items, y, m, dim) {
+  const str = v => v == null ? '' : String(v), cmp = (a, b) => str(a).localeCompare(str(b), 'th');
   const edit = cpCanEdit(), dis = edit ? '' : ' disabled', ord = { ppm: 0, an: 1, gen: 2 };
   let body = '';
   for (let d = 1; d <= dim; d++) {
     const t = Date.UTC(y, m, d), day = dfmt(t), w = new Date(y, m, d).getDay();
     const on = items.filter(i => i.start <= t && t <= i.end)
-      .sort((a, b) => (a.team || '').localeCompare(b.team || '', 'th') || a.project.localeCompare(b.project, 'th') || ord[a.kind] - ord[b.kind]);
+      .sort((a, b) => cmp(a.team, b.team) || cmp(a.project, b.project) || (ord[a.kind] || 0) - (ord[b.kind] || 0));
     if (!on.length) continue;
     on.forEach((it, k) => {
       const wp = ((cpRec(it.src, it.id) || {}).wp || {})[day] || {};
-      const ops = it.ops.slice(0, CP_OPS - 1).concat(it.ops.length >= CP_OPS ? [it.ops.slice(CP_OPS - 1).join(', ')] : []);
+      const ops = it.ops.map(str).slice(0, CP_OPS - 1).concat(it.ops.length >= CP_OPS ? [it.ops.slice(CP_OPS - 1).join(', ')] : []);
       while (ops.length < CP_OPS) ops.push('');
       const a = `data-src="${it.src}" data-id="${esc(it.id)}" data-day="${day}"`;
       body += `<tr class="${k === 0 ? 'cp-first' : ''}${w === 0 || w === 6 ? ' cp-wk' : ''}">` +
@@ -101,11 +106,12 @@ function renderCalPlan(items, y, m, dim) {
     });
   }
   const mm = `${String(m+1).padStart(2,'0')}-${y}`, cols = 6 + CP_OPS;
-  box.innerHTML = `<table class="cp-tbl"><thead>
+  const opList = (() => { try { return opPickList(); } catch (e) { return []; } })();
+  return `<table class="cp-tbl"><thead>
     <tr><th class="cp-title" colspan="${cols}">แผนปฏิบัติงานประจำเดือน&nbsp; ${mm}<small>Maintenance</small></th></tr>
     <tr class="cp-head"><th>วัน/วันที่</th><th colspan="2">รายละเอียดงานที่ต้องปฏิบัติ/ไซต์งาน</th><th colspan="${CP_OPS}">ผู้ปฏิบัติ</th><th>ผรม</th><th>เปิด Work เรียบร้อย</th><th>ผู้รับผิดชอบเปิด Work</th></tr></thead>
-    <tbody>${body || `<tr><td colspan="${cols}" class="empty">ไม่มีงานในเดือนนี้</td></tr>`}</tbody></table>
-    <datalist id="cp-ops-list">${opPickList().map(n => `<option value="${esc(n)}">`).join('')}</datalist>`;
+    <tbody>${body || `<tr><td colspan="${cols}" class="empty">ไม่มีงานในเดือน ${MONTHS[m+1]} ${y} — กด “เดือนถัดไป ▶” หรือตรวจตัวกรอง Operator / Subcontractor</td></tr>`}</tbody></table>
+    <datalist id="cp-ops-list">${opList.map(n => `<option value="${esc(n)}">`).join('')}</datalist>`;
 }
 // บันทึกสถานะเปิด Work แยกรายวัน ไว้ในงานนั้น (r.wp[YYYY-MM-DD]) → ซิงก์ขึ้นคลาวด์พร้อมข้อมูลงาน
 function calWpSet(el, field, val) {
