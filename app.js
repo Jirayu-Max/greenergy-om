@@ -106,6 +106,14 @@ function loadOpts() {
   saveOpts();
 }
 function saveOpts() { localStorage.setItem(OPT_KEY, JSON.stringify(options)); }
+
+// ── Work Order: เลขที่ใบสั่งงาน WO-YYMM-### (นับต่อเนื่องรายเดือน ใช้ร่วมกันทั้งบันทึกงานและ Plan PM&AN) ──
+function woNext(dateStr, extra) {
+  const d = /^\d{4}-\d{2}/.test(dateStr || '') ? dateStr : today(), pre = `WO-${d.slice(2,4)}${d.slice(5,7)}-`;
+  const used = [...records, ...(ppmRecords || []), ...(extra || [])].map(r => String(r.workOrder || '')).filter(w => w.startsWith(pre)).map(w => parseInt(w.slice(pre.length), 10) || 0);
+  return pre + String(Math.max(0, ...used) + 1).padStart(3, '0');
+}
+const woCell = w => w ? `<span class="wo-chip">${esc(w)}</span>` : '<span style="color:#ccc">-</span>';
 function uniq(arr) { return [...new Set(arr.filter(x=>x && String(x).trim()))]; }
 function typesList() {
   const set = [...options.typeOfWork];
@@ -426,6 +434,7 @@ function renderWorkLog() {
   $('wl-tbody').innerHTML = rows.length ? rows.map((r,i) => `
     <tr>
       <td style="text-align:center">${i+1}</td>
+      <td style="white-space:nowrap">${woCell(r.workOrder)}</td>
       <td style="white-space:nowrap;text-align:center">${r.date||'-'}</td>
       <td style="white-space:nowrap;text-align:center">${r.finish||'<span style=\"color:#ccc\">-</span>'}</td>
       <td style="white-space:nowrap;text-align:center">${r.plan?esc(r.plan):'<span style=\"color:#ccc\">-</span>'}</td>
@@ -445,7 +454,7 @@ function renderWorkLog() {
         <button class="btn-edit" onclick="openEdit(${r.id})">✏️</button>
         <button class="btn-del"  onclick="del(${r.id})">🗑️</button>
       </td>
-    </tr>`).join('') : '<tr><td colspan="17" class="empty">ไม่พบรายการ</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="18" class="empty">ไม่พบรายการ</td></tr>';
 }
 
 // ── Daily ─────────────────────────────────────────────────────
@@ -602,6 +611,7 @@ function openAdd() {
   $('f-plan').value     = '';
   $('f-sla-h').value    = '';
   $('f-sla-act').value  = '';
+  $('f-wo').value       = ''; $('f-wo').placeholder = woNext(today()) + ' (อัตโนมัติ)';
   $('f-status').value   = 'เสร็จแล้ว';
   $('f-priority').value = 'Medium';
   $('f-report').value   = 'ยังไม่จัดทำ';
@@ -619,6 +629,7 @@ function openEdit(id) {
   $('f-plan').value     = r.plan || '';
   $('f-sla-h').value    = hasNum(r.slaHours)  ? r.slaHours  : '';
   $('f-sla-act').value  = hasNum(r.slaActual) ? r.slaActual : '';
+  $('f-wo').value       = r.workOrder || ''; $('f-wo').placeholder = woNext(r.date) + ' (อัตโนมัติ)';
   $('f-priority').value = r.priority;
   $('f-status').value   = r.status;
   $('f-report').value   = r.report || 'ยังไม่จัดทำ';
@@ -644,6 +655,7 @@ function saveRecord() {
   const isNew = !editId;
   const rec = {
     id:          editId || nextId++,
+    workOrder:   $('f-wo').value.trim() || woNext(date),
     date,
     finish:      $('f-finish').value,
     plan:        $('f-plan').value.trim(),
@@ -663,7 +675,7 @@ function saveRecord() {
     slaStatus:   editId ? ((records.find(x=>x.id===editId)||{}).slaStatus||'') : '',
   };
   if (!rec.owner && rec.project) { const pj = (pjRecords||[]).find(p=>p.name===rec.project); if (pj && pj.owner) rec.owner = pj.owner; }
-  if (editId) { const old = records.find(x=>x.id===editId); if (old && old.ppmPid != null) rec.ppmPid = old.ppmPid; }
+  if (editId) { const old = records.find(x=>x.id===editId); if (old) Object.keys(old).forEach(k => { if (!(k in rec)) rec[k] = old[k]; }); }   // คงฟิลด์อื่นไว้ (ppmPid, สถานะเปิด Work ฯลฯ)
   rec.jobDescriptions.forEach(j => { if (j && !options.jobDescriptions.includes(j)) options.jobDescriptions.push(j); });
   saveOpts();
   if (editId) records[records.findIndex(x=>x.id===editId)] = rec;
@@ -1434,6 +1446,7 @@ function ppmRowHtml(k) {
     <div class="form-grid cols-4">
       ${g('PM&AN', ppmOptRow(`pp-type-${k}`,'ppmType','PM&AN'))}
       ${g('Activity', ppmOptRow(`pp-activity-${k}`,'ppmActivity','Activity',` onchange="ppmAutofillBOQ(${k})"`))}
+      ${g('Work Order (WO) <span class="lbl-hint">ว่าง = อัตโนมัติ</span>', `<input type="text" id="pp-wo-${k}" placeholder="WO-YYMM-001">`)}
       ${g('Round', `<input type="text" id="pp-round-${k}" placeholder="3/15">`)}
       ${g('ปี (Year)', `<select id="pp-year-${k}"></select>`)}
       ${g('เดือน', `<select id="pp-month-${k}">${months}</select>`)}
@@ -1469,6 +1482,7 @@ function ppmAddRow(rec) {
   opsInit('pp-ops-' + k, rec ? opsOf(rec) : d.ops);
   fillPpmStatus($('pp-status-' + k), rec ? ppmStatusOf(rec) : 'ยังไม่เริ่ม');
   if (rec) {
+    $('pp-wo-' + k).value = rec.workOrder || '';
     $('pp-round-' + k).value = rec.round ?? ''; $('pp-start-' + k).value = rec.start || ''; $('pp-days-' + k).value = rec.days ?? '';
     $('pp-end-' + k).value = rec.end || ''; $('pp-budget-' + k).value = rec.budget ?? ''; $('pp-actual-' + k).value = rec.actual ?? '';
     $('pp-progress-' + k).value = Math.round((rec.progress||0)*100); $('pp-remark-' + k).value = rec.remark || '';
@@ -1519,6 +1533,7 @@ function renderPlanPM() {
       <td style="text-align:center">${r.month}</td>
       <td style="text-align:center">${i+1}</td>
       <td style="font-weight:600">${esc(r.plant)}</td>
+      <td style="white-space:nowrap">${woCell(r.workOrder)}</td>
       <td style="text-align:right">${r.capacity?(+r.capacity).toFixed(4):'-'}</td>
       <td>${esc(r.owner)}</td>
       <td>${esc(r.activity)}</td>
@@ -1536,7 +1551,7 @@ function renderPlanPM() {
         <button class="btn-edit" onclick="openEditPpm(${r.pid})">✏️</button>
         <button class="btn-del"  onclick="delPpm(${r.pid})">🗑️</button>
       </td>
-    </tr>`).join('') : '<tr><td colspan="17" class="empty">ไม่พบรายการ</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="18" class="empty">ไม่พบรายการ</td></tr>';
 
   // Monthly chart — 3 bars/เดือน: QPM (สำเร็จ/คงเหลือ) • AN (สำเร็จ/คงเหลือ) • เลื่อน (QPM+AN)
   const qd=[],qp=[],ad=[],ap=[],qx=[],ax=[];
@@ -1627,6 +1642,7 @@ function savePpm() {
       ptype: $('pp-ptype').value.trim(), region: $('pp-region').value.trim(), province: $('pp-province').value.trim(),
       status: v('pp-status'),
     };
+    rec.workOrder = v('pp-wo').trim() || woNext(rec.start, out);
     if (old) Object.keys(old).forEach(key => { if (!(key in rec)) rec[key] = old[key]; });
     out.push(rec);
   });
@@ -1664,11 +1680,12 @@ function syncPpmToJobLog() {
     if (ex) {
       const st = progToStatus(a.progress);           // keep status in sync with Progress
       if (ex.status !== st) { ex.status = st; changed = true; }
+      if (a.workOrder && ex.workOrder !== a.workOrder) { ex.workOrder = a.workOrder; changed = true; }   // WO เดียวกับงานใน Plan PM&AN
       return;
     }
     if (!a.start || a.start > cutoff) return;         // only up to today's date
     records.push({
-      id: nextId++, ppmPid: a.pid,
+      id: nextId++, ppmPid: a.pid, workOrder: a.workOrder || '',
       date: a.start, finish: a.end||'', plan: '',
       project: a.plant||'', owner: a.owner||'', typeOfWork: a.type||'',
       jobDescriptions: a.activity ? [a.activity] : [],
