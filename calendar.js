@@ -285,7 +285,7 @@ function calShowItem(src, id) {
       row('Detail', (r.details||[]).join('\n')) + row('Plan (วันเริ่มในปฏิทิน)', r.plan) + row('Start → Finish', `${r.date || '-'} → ${r.finish || '-'}`) + row('Operator', opsOf(r).join(', ')) +
       row('Priority / สถานะ', `${r.priority} / ${r.status}`) + row('SLA', slaEffective(r)) + row('Report#', r.report);
   }
-  $('cd-body').innerHTML = h + calSendBlock(); $('cal-detail').classList.add('open');
+  $('cd-body').innerHTML = h; $('cal-detail').classList.add('open');
 }
 function closeCalDetail() { $('cal-detail').classList.remove('open'); }
 function calDetailEdit() { const s = calSel; closeCalDetail(); if (!s) return; if (s.src === 'ppm') openEditPpm(s.id); else openEdit(s.id); }
@@ -304,7 +304,7 @@ let opsSeq = 0;
 function opsFill(sel, cur) { const l = opPickList(); cur = cur ? staffResolve(cur) : cur; if (cur && !l.includes(cur)) l.unshift(cur); sel.innerHTML = '<option value="">— เลือก Operator —</option>' + l.map(v => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join(''); }
 function opsInit(cid, names) {
   const box = $(cid); if (!box) return;
-  box.innerHTML = `<div class="ops-rows"></div><div class="ops-actions"><button type="button" class="btn-add-jd" onclick="opsAdd('${cid}')">＋ เพิ่มช่อง Operator</button><a class="ops-link" onclick="opOpen()">✉️ อีเมล / เชื่อม Outlook-Teams</a></div>`;
+  box.innerHTML = `<div class="ops-rows"></div><div class="ops-actions"><button type="button" class="btn-add-jd" onclick="opsAdd('${cid}')">＋ เพิ่มช่อง Operator</button></div>`;
   (names && names.length ? names : ['']).forEach(n => opsAdd(cid, n));
 }
 function opsAdd(cid, name) {

@@ -177,7 +177,7 @@ async function cloudForceUpload() {
   Object.keys(COL).forEach(k => { CLOUD.base[k] = '__force__'; }); for (const k of Object.keys(COL)) await cloudPush(k); toast('อัปโหลดทับแล้ว'); closeCloud();
 }
 // แท็บที่กำหนดสิทธิ์เข้าถึงได้ (null/ว่าง = ทุกแท็บ; admin เห็นทุกแท็บเสมอ)
-const ACCESS_TABS = [['dashboard', '📊 Dashboard'], ['worklog', '📋 บันทึกงาน'], ['calendar', '🗓️ Calendar'], ['projects', '📑 Project list'], ['planpm', '🔧 Plan PM&AN'], ['staff', '👥 รายชื่อ']];
+const ACCESS_TABS = [['dashboard', '📊 Dashboard'], ['worklog', '📋 บันทึกงานบำรุงรักษา'], ['planpm', '📋 Plan PM & AN'], ['calendar', '🗓️ Calendar'], ['projects', '📑 Project list'], ['staff', '👥 รายชื่อพนักงาน']];
 const needSql = e => /admin_create_user|admin_set_password|admin_delete_user|password_changed|must_change_pw|display_name|tabs|schema cache|does not exist/i.test(e && e.message || '');
 const sqlHint = 'ยังไม่ได้ติดตั้งส่วนจัดการผู้ใช้ในฐานข้อมูล — ให้ผู้ดูแลรันไฟล์ cloud-users.sql ใน Supabase → SQL Editor ก่อน';
 function cloudApplyTabs(tabs) {

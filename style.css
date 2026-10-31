@@ -995,3 +995,4 @@ body[data-tab="staff"] .content { max-width: 1500px; }
 .u-pending { color: #b7791f; }
 .cred-text { width: 100%; margin-top: 8px; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font: 13px/1.6 inherit; font-family: inherit; resize: none; background: #f7f9f7; }
 .u-tab span { text-transform: none; letter-spacing: 0; }
+.row-click { cursor: pointer; } .row-click:hover td { background: #eef5f0 !important; } body[data-role="viewer"] .row-click { cursor: default; }

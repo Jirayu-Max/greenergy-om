@@ -440,13 +440,20 @@ function clearPpmSynced() {
   if (!confirm(`ลบ ${n} รายการที่เคยถูกดึงมาจาก Plan PM&AN อัตโนมัติ?\n(รายการที่คุณเพิ่มเองไม่ถูกลบ • ข้อมูลใน Plan PM&AN ไม่เปลี่ยน)`)) return;
   records = records.filter(r => r.ppmPid == null); save(); renderWorkLog();
 }
+// คลิกที่แถว = เปิดแก้ไข (ยกเว้นคลิกปุ่ม/ลิงก์ในแถว, ลากเลือกข้อความ หรือสิทธิ์ดูอย่างเดียว)
+function rowEdit(e, src, id) {
+  if (e.target.closest('button, a, input, select, label, summary')) return;
+  if (String(window.getSelection && getSelection()).trim()) return;
+  if (document.body.dataset.role === 'viewer') return;
+  if (src === 'ppm') openEditPpm(id); else openEdit(id);
+}
 function renderWorkLog() {
   const rows = filtered();
   $('btn-clear-ppm').style.display = records.some(r => r.ppmPid != null) ? '' : 'none';
   renderWlDash(rows);
   $('wl-count').textContent = rows.length + ' รายการ';
   $('wl-tbody').innerHTML = rows.length ? rows.map((r,i) => `
-    <tr>
+    <tr class="row-click" onclick="rowEdit(event,'rec',${r.id})" title="คลิกเพื่อแก้ไข">
       <td style="text-align:center">${i+1}</td>
       <td style="white-space:nowrap">${woCell(r.workOrder)}</td>
       <td style="white-space:nowrap;text-align:center">${r.date||'-'}</td>
@@ -1544,7 +1551,7 @@ function renderPlanPM() {
   $('ppm-budget').textContent = '฿' + Math.round(rows.reduce((s,r)=>s+(r.budget||0),0)).toLocaleString();
   $('ppm-count').textContent  = rows.length + ' รายการ';
   $('ppm-tbody').innerHTML = rows.length ? rows.map((r,i) => `
-    <tr>
+    <tr class="row-click" onclick="rowEdit(event,'ppm',${r.pid})" title="คลิกเพื่อแก้ไข">
       <td style="text-align:center">${r.month}</td>
       <td style="text-align:center">${i+1}</td>
       <td style="font-weight:600">${esc(r.plant)}</td>
