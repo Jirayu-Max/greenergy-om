@@ -27,6 +27,7 @@
   <div class="tab" data-tab="calendar" onclick="switchTab('calendar')">🗓️ Smart O&amp;M Calendar</div>
   <div class="tab" data-tab="projects" onclick="switchTab('projects')">📑 Project list OM</div>
   <div class="tab" data-tab="planpm"   onclick="switchTab('planpm')">🔧 Plan PM&amp;AN</div>
+  <div class="tab" data-tab="staff"    onclick="switchTab('staff')">👥 รายชื่อ</div>
 </nav>
 
 <!-- ══ CONTENT ══ -->
@@ -200,6 +201,27 @@
           <tbody id="ppm-tbody"></tbody>
         </table>
       </div>
+    </div>
+  </div>
+
+
+  <!-- ── STAFF ── -->
+  <div id="tab-staff" class="tab-pane">
+    <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi-card">       <div class="kpi-label">👥 พนักงานทั้งหมด</div><div class="kpi-value" id="st-total">0</div><div class="kpi-sub">คน</div></div>
+      <div class="kpi-card blue">  <div class="kpi-label">🏷️ ทีม</div>          <div class="kpi-value" id="st-teams">0</div><div class="kpi-sub">Team / Subcontractor</div></div>
+      <div class="kpi-card moss">  <div class="kpi-label">🌱 พนักงานใหม่</div>    <div class="kpi-value" id="st-new">0</div><div class="kpi-sub">อายุงานไม่ถึง 1 ปี</div></div>
+      <div class="kpi-card amber"> <div class="kpi-label">⏳ อายุงานเฉลี่ย</div>  <div class="kpi-value" id="st-avg" style="font-size:26px">-</div><div class="kpi-sub">Average tenure</div></div>
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <h3>👥 รายชื่อพนักงาน <span class="hint">(ใช้เป็นตัวเลือกช่อง Operator ของ บันทึกงาน และ Plan PM&amp;AN)</span></h3>
+        <input type="text" id="st-srch" class="search-input" placeholder="🔍 ค้นหา ชื่อ / ชื่อเล่น / ตำแหน่ง / เบอร์...">
+        <select id="st-fteam" class="filter-sel"><option value="">ทุกทีม</option></select>
+        <span id="st-count" class="count-chip"></span>
+        <button class="btn-primary" onclick="openAddStaff()">➕ เพิ่มพนักงานใหม่</button>
+      </div>
+      <div id="st-grid" class="st-grid"></div>
     </div>
   </div>
 
@@ -474,11 +496,48 @@
   </div>
 </div>
 
+<!-- ══ STAFF MODAL ══ -->
+<div id="st-modal" class="modal-overlay">
+  <div class="modal modal-wide" style="max-width:740px">
+    <h2 id="st-title">➕ เพิ่มพนักงานใหม่</h2>
+    <form class="modal-form" onsubmit="event.preventDefault(); saveStaff();">
+      <div class="modal-body">
+        <div class="st-form">
+          <div class="st-photo-col">
+            <label class="st-photo-pick" title="เลือกรูป"><div id="st-photo-prev" class="st-photo-prev"><span>📷</span></div>
+              <input type="file" accept="image/*" onchange="stPickPhoto(this)" hidden><span class="st-photo-btn">📷 เลือกรูป</span></label>
+            <button type="button" id="st-photo-del" class="st-photo-del" onclick="stDelPhoto()">ลบรูป</button>
+          </div>
+          <div class="form-grid cols-2" style="flex:1">
+            <div class="form-group"><label>ชื่อจริง - นามสกุล *</label><input type="text" id="st-name" placeholder="เช่น สมชาย ใจดี"></div>
+            <div class="form-group"><label>ชื่อเล่น</label><input type="text" id="st-nick" placeholder="เช่น เสือ"></div>
+            <div class="form-group"><label>ตำแหน่ง</label><input type="text" id="st-pos" list="dl-st-pos" placeholder="เช่น ช่างเทคนิค"></div>
+            <div class="form-group"><label>ทีม</label><input type="text" id="st-team" list="dl-st-team" placeholder="เช่น Team A"></div>
+            <div class="form-group"><label>เบอร์โทร</label><input type="tel" id="st-phone" placeholder="08x-xxx-xxxx"></div>
+            <div class="form-group"><label>อีเมล</label><input type="email" id="st-email" placeholder="name@company.com"></div>
+            <div class="form-group"><label>วันเริ่มงาน</label><input type="date" id="st-start"></div>
+            <div class="form-group"><label>อายุงาน <span class="lbl-hint">(คำนวณอัตโนมัติ)</span></label><div id="st-tenure" class="st-tenure-box">-</div></div>
+          </div>
+        </div>
+        <div class="st-note">💡 ช่อง Operator จะแสดงเป็น <b>ชื่อจริง (ชื่อเล่น)</b> • ถ้างานเดิมใช้ชื่อเล่นหรือชื่อจริงนี้อยู่ ระบบจะถามเพื่อผูกให้อัตโนมัติ</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="st-del" class="btn-del" style="padding:9px 18px;margin-right:auto" onclick="delStaff()">🗑️ ลบ</button>
+        <button type="button" class="btn-cancel" onclick="closeStaff()">ยกเลิก</button>
+        <button type="submit" class="btn-primary">💾 บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>
+<datalist id="dl-st-team"></datalist>
+<datalist id="dl-st-pos"></datalist>
+
 <script src="cloud-config.js"></script>
 <script src="supabase.min.js"></script>
 <script src="projects.js"></script>
 <script src="planpm.js"></script>
 <script src="app.js"></script>
+<script src="staff.js"></script>
 <script src="calendar.js"></script>
 <script src="dashboard.js"></script>
 <script src="cloud.js"></script>

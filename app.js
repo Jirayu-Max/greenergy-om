@@ -712,7 +712,7 @@ function del(id) {
 function rawJSON(k, fb) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? fb : v; } catch(e) { return fb; } }
 function exportJSON() {
   const payload = {version:8, exported:new Date().toISOString(), records, options, projects:pjRecords,
-    workplan:rawJSON(WPKEY,null), holidays:rawJSON(HDKEY,[]), planpm:ppmRecords, operatorDir: (typeof opDir!=='undefined'?opDir:null)};
+    workplan:rawJSON(WPKEY,null), holidays:rawJSON(HDKEY,[]), planpm:ppmRecords, operatorDir: (typeof opDir!=='undefined'?opDir:null), staff};
   dl(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}), `maintenance_backup_${today()}.json`);
 }
 function importJSON() {
@@ -741,6 +741,7 @@ function importJSON() {
         if (data.workplan) localStorage.setItem(WPKEY, JSON.stringify(data.workplan));   // เก็บข้อมูลเดิมไว้ (หน้าถูกนำออกแล้ว)
         if (Array.isArray(data.holidays)) localStorage.setItem(HDKEY, JSON.stringify(data.holidays));
         if (data.operatorDir && typeof data.operatorDir==='object' && typeof opSaveDir==='function') { opDir = Object.assign({ emails:{}, organizer:'', flowUrl:'', autoSend:false, sent:{} }, data.operatorDir); opSaveDir(); }
+        if (Array.isArray(data.staff)) { staff = data.staff; staffNextId = Math.max(0, ...staff.map(s => s.sid || 0)) + 1; staffSave(); }
         if (Array.isArray(data.planpm)) { ppmRecords = data.planpm; ppmSaveStore(); planpmInit(); }
         nextId = Math.max(0, ...records.map(r=>r.id))+1;
         save(); initDashDates(); msInitAll(); renderCur(); closeBackup();
@@ -1726,7 +1727,7 @@ function switchTab(tab) {
 }
 function renderCur() {
   ({dashboard:renderDashboard, worklog:renderWorkLog, calendar:(window.renderCalendar||(()=>{})),
-    projects:renderProjects, planpm:renderPlanPM}[curTab]||(()=>{}))();
+    projects:renderProjects, planpm:renderPlanPM, staff:renderStaff}[curTab]||(()=>{}))();
 }
 
 // ── Helpers ───────────────────────────────────────────────────

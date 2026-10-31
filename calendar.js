@@ -99,6 +99,7 @@ function cpTableHtml(days, y, m) {
   const dis = cpCanEdit() ? '' : ' disabled', cols = 6 + CP_OPS;
   const opList = (() => { try { return opPickList().map(cpStr); } catch (e) { return []; } })();
   const opSel = (a, i, cur, extra) => {
+    cur = cur ? staffResolve(cur) : cur;
     const l = cur && !opList.includes(cur) ? [cur, ...opList] : opList;
     return `<select class="cp-opsel${cur ? ' has' : ''}" ${a} data-i="${i}"${dis} onchange="calOpSet(this)"${extra.length ? ` title="รวม: ${esc(extra.join(', '))}"` : ''}><option value="">–</option>${l.map(n => `<option${n === cur ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>${extra.length ? `<small class="cp-more">+${extra.length}</small>` : ''}`;
   };
@@ -295,10 +296,11 @@ function calDetailDel() {
 }
 
 // ═══ ช่อง Operator หลายคน (ใช้ทั้งฟอร์มบันทึกงานและ PM&AN) ═══════════
-function opPickList() { return uniq([...(options.operator || []), ...(options.ppmOperator || [])]).filter(Boolean).sort((a, b) => a.localeCompare(b, 'th')); }
+// มีรายชื่อพนักงานแล้ว → ใช้ "ชื่อจริง (ชื่อเล่น)" จากแท็บรายชื่อ, ยังไม่มี → ใช้รายการเดิม
+function opPickList() { if (staff.length) return staffLabels(); return uniq([...(options.operator || []), ...(options.ppmOperator || [])]).filter(Boolean).sort((a, b) => a.localeCompare(b, 'th')); }
 function opsRegister(names) { (names || []).forEach(n => { if (!n) return; ['operator', 'ppmOperator'].forEach(k => { if (!Array.isArray(options[k])) options[k] = []; if (!options[k].includes(n)) options[k].push(n); }); }); saveOpts(); }
 let opsSeq = 0;
-function opsFill(sel, cur) { const l = opPickList(); if (cur && !l.includes(cur)) l.unshift(cur); sel.innerHTML = '<option value="">— เลือก Operator —</option>' + l.map(v => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join(''); }
+function opsFill(sel, cur) { const l = opPickList(); cur = cur ? staffResolve(cur) : cur; if (cur && !l.includes(cur)) l.unshift(cur); sel.innerHTML = '<option value="">— เลือก Operator —</option>' + l.map(v => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join(''); }
 function opsInit(cid, names) {
   const box = $(cid); if (!box) return;
   box.innerHTML = `<div class="ops-rows"></div><div class="ops-actions"><button type="button" class="btn-add-jd" onclick="opsAdd('${cid}')">＋ เพิ่มช่อง Operator</button><a class="ops-link" onclick="opOpen()">✉️ อีเมล / เชื่อม Outlook-Teams</a></div>`;
@@ -306,13 +308,13 @@ function opsInit(cid, names) {
 }
 function opsAdd(cid, name) {
   const id = 'ops-' + (++opsSeq), d = document.createElement('div'); d.className = 'opt-row ops-row';
-  d.innerHTML = `<select class="ops-sel" id="${id}"></select><button type="button" class="btn-add-opt" title="เพิ่มชื่อ Operator ใหม่ในรายการ" onclick="opsNewName('${id}')">＋</button><button type="button" class="btn-del-opt" title="ลบชื่อที่เลือกออกจากรายการ" onclick="opsDelName('${id}')">🗑</button><button type="button" class="ops-rm" title="ลบช่องนี้" onclick="opsRm(this)">➖</button>`;
+  d.innerHTML = `<select class="ops-sel" id="${id}"></select><button type="button" class="btn-add-opt" title="➕ เพิ่มพนักงานใหม่ในรายชื่อ" onclick="opsNewName('${id}')">＋</button><button type="button" class="ops-rm" title="ลบช่องนี้" onclick="opsRm(this)">➖</button>`;
   $(cid).querySelector('.ops-rows').appendChild(d); opsFill($(id), name || '');
 }
 function opsRm(btn) { const row = btn.closest('.ops-row'); if (row.parentNode.children.length > 1) row.remove(); }
 function opsGet(cid) { const b = $(cid); return b ? uniq([...b.querySelectorAll('.ops-sel')].map(x => x.value).filter(Boolean)) : []; }
 function opsRefreshAll(originId, originVal) { document.querySelectorAll('.ops-sel').forEach(x => opsFill(x, x.id === originId ? originVal : x.value)); }
-function opsNewName(id) { const n = (prompt('➕ เพิ่มชื่อ Operator ใหม่:') || '').trim(); if (!n) return; opsRegister([n]); opsRefreshAll(id, n); }
+function opsNewName(id) { openAddStaff(id); }   // เพิ่มชื่อใหม่ = เพิ่มพนักงานในแท็บรายชื่อ แล้วเลือกให้ในช่องนี้
 function opsDelName(id) {
   const v = $(id).value; if (!v) return;
   if (!confirm(`ลบ "${v}" ออกจากรายการ Operator?\n(งานเดิมที่ใช้ชื่อนี้จะยังคงอยู่)`)) return;
@@ -321,7 +323,7 @@ function opsDelName(id) {
 
 // ═══ ส่งงานเข้า Outlook / Teams ของ Operator ═══════════════════════
 const parseEmails = txt => { const seen = new Set(), ok = [], bad = []; String(txt || '').split(/[\s,;]+/).map(x => x.trim()).filter(Boolean).forEach(x => { const k = x.toLowerCase(); if (seen.has(k)) return; seen.add(k); (/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(x) ? ok : bad).push(x); }); return { ok, bad }; };
-const opEmails = name => parseEmails((opDir.emails || {})[name]).ok;
+const opEmails = name => { const ok = parseEmails((opDir.emails || {})[name]).ok, s = staffFind(name); return ok.length || !s || !s.email ? ok : parseEmails(s.email).ok; };
 const opsEmails = names => uniq((names || []).flatMap(opEmails));
 const tzOff = () => { const m = -new Date().getTimezoneOffset(), a = Math.abs(m); return (m >= 0 ? '+' : '-') + String(Math.floor(a / 60)).padStart(2, '0') + ':' + String(a % 60).padStart(2, '0'); };
 const tzIso = (d, hhmm) => `${d}T${hhmm}:00${tzOff()}`;

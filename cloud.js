@@ -1,7 +1,7 @@
 'use strict';
 // ═══ Cloud sync (Supabase) — ข้อมูลกลางของทีม + สิทธิ์ แก้ไข/ดูอย่างเดียว ═══════════════
 // หลักการ: local-first (ยังเก็บใน localStorage ตามเดิม) แล้วซิงก์ขึ้นตาราง app_data
-//  • แต่ละชุดข้อมูล (records/ppm/projects/options/opdir/flow) = 1 แถว มี version
+//  • แต่ละชุดข้อมูล (records/ppm/projects/options/opdir/flow/staff) = 1 แถว มี version
 //  • บันทึกแบบ compare-and-swap; ถ้าชนกับคนอื่น → รวมข้อมูลแบบ 3-way (ตาม id ของแต่ละงาน) แล้วบันทึกซ้ำ
 //  • ตารางไม่อนุญาตให้ลบ และมี app_data_history เก็บเวอร์ชันก่อนหน้าทุกครั้ง
 const CFG = window.GREENERGY_CLOUD || {};
@@ -18,9 +18,10 @@ const COL = {
   projects: { idKey: 'pid', get: () => pjRecords, set: v => { pjRecords = v.map(pjMigrate); nextPid = Math.max(0, ...pjRecords.map(p => p.pid || 0)) + 1; _orig.pjSave(); }, empty: v => !v.length },
   options:  { get: () => options, set: v => { options = v; ['typeOfWork','project','owner','operator','jobDescriptions','priority','status','report'].forEach(k => { if (!Array.isArray(options[k])) options[k] = []; }); _orig.saveOpts(); } },
   opdir:    { get: () => ({ emails: opDir.emails || {}, organizer: opDir.organizer || '', sent: opDir.sent || {} }), set: v => { opDir.emails = v.emails || {}; opDir.organizer = v.organizer || ''; opDir.sent = v.sent || {}; _orig.opSaveDir(); } },
+  staff:    { idKey: 'sid', get: () => staff, set: v => { staff = v; staffNextId = Math.max(0, ...staff.map(s => s.sid || 0)) + 1; _orig.staffSave(); }, empty: v => !v.length },
   flow:     { get: () => ({ flowUrl: opDir.flowUrl || '', autoSend: !!opDir.autoSend }), set: v => { opDir.flowUrl = v.flowUrl || ''; opDir.autoSend = !!v.autoSend; _orig.opSaveDir(); }, secret: true },   // อ่านได้เฉพาะผู้แก้ไข (RLS)
 };
-const KEYMAP = { save: ['records'], ppmSaveStore: ['ppm'], pjSave: ['projects'], saveOpts: ['options'], opSaveDir: ['opdir', 'flow'] };
+const KEYMAP = { save: ['records'], ppmSaveStore: ['ppm'], pjSave: ['projects'], saveOpts: ['options'], opSaveDir: ['opdir', 'flow'], staffSave: ['staff'] };
 const _orig = {};
 
 // ── รวมข้อมูล 3 ทาง (base = ตอนซิงก์ล่าสุด, local = ที่แก้ในเครื่อง, remote = ล่าสุดในคลาวด์) ──
@@ -186,7 +187,7 @@ async function saveUsers() {
 // ── เริ่มต้น ─────────────────────────────────────────────────────
 if (CLOUD.on) {
   Object.entries(KEYMAP).forEach(([fn, keys]) => { if (typeof window[fn] !== 'function') return; _orig[fn] = window[fn]; window[fn] = function (...a) { _orig[fn].apply(this, a); keys.forEach(cloudQueue); }; });
-  ['openAdd', 'openEdit', 'del', 'clearPpmSynced', 'addOpt', 'delOpt', 'importJSON', 'openAddProj', 'openEditProj', 'delProj', 'openAddPpm', 'openEditPpm', 'delPpm', 'calMove', 'calWpSet', 'calOpSet', 'woBackfill', 'opSave', 'opAddPerson', 'opsNewName', 'opsDelName', 'calSendTo'].forEach(n => {
+  ['openAdd', 'openEdit', 'del', 'clearPpmSynced', 'addOpt', 'delOpt', 'importJSON', 'openAddProj', 'openEditProj', 'delProj', 'openAddPpm', 'openEditPpm', 'delPpm', 'calMove', 'calWpSet', 'calOpSet', 'woBackfill', 'opSave', 'opAddPerson', 'opsNewName', 'opsDelName', 'calSendTo', 'openAddStaff', 'openEditStaff', 'saveStaff', 'delStaff'].forEach(n => {
     if (typeof window[n] !== 'function') return; const f = window[n];
     window[n] = function (...a) { if (!cloudEdit()) { toast('สิทธิ์ดูอย่างเดียว — ไม่สามารถแก้ไขได้'); return; } return f.apply(this, a); };
   });
@@ -196,4 +197,4 @@ if (CLOUD.on) {
     $('login-pw').addEventListener('keydown', e => { if (e.key === 'Enter') cloudLogin(false); });
     const { data } = await CLOUD.sb.auth.getSession(); if (data && data.session) cloudAfterLogin(data.session.user);
   });
-} else { _orig.save = save; _orig.ppmSaveStore = ppmSaveStore; _orig.pjSave = pjSave; _orig.saveOpts = saveOpts; _orig.opSaveDir = opSaveDir; document.addEventListener('DOMContentLoaded', cloudChip); }
+} else { _orig.save = save; _orig.ppmSaveStore = ppmSaveStore; _orig.pjSave = pjSave; _orig.saveOpts = saveOpts; _orig.opSaveDir = opSaveDir; _orig.staffSave = staffSave; document.addEventListener('DOMContentLoaded', cloudChip); }
