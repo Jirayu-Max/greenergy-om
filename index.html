@@ -553,7 +553,7 @@
     <label>รหัสผ่าน</label><input type="password" id="login-pw" autocomplete="current-password">
     <div id="login-msg" class="login-msg"></div>
     <button class="btn-primary" style="width:100%" onclick="cloudLogin(false)">เข้าสู่ระบบ</button>
-    <button class="btn-secondary" style="width:100%;margin-top:8px" onclick="cloudLogin(true)">สมัครใช้งาน (สิทธิ์เริ่มต้น: ดูอย่างเดียว)</button>
+    <div class="login-s" style="margin-top:12px">ยังไม่มีบัญชี? ติดต่อผู้ดูแลระบบเพื่อขออีเมลและรหัสผ่าน</div>
   </div>
 </div>
 <div id="cloud-modal" class="modal-overlay"><div class="modal modal-wide" style="max-width:460px"><h2>☁️ คลาวด์ / บัญชี</h2>
@@ -561,11 +561,37 @@
   <div class="modal-footer modal-footer-sticky" style="flex-wrap:wrap">
     <button class="btn-cancel" onclick="closeCloud()">ปิด</button>
     <span id="cloud-admin"><button class="btn-secondary" onclick="openUsers()">👥 จัดการผู้ใช้</button> <button class="btn-secondary" onclick="cloudForceUpload()">⬆️ อัปโหลดทับ</button></span>
+    <button class="btn-secondary" onclick="openPwChange(false)">🔑 เปลี่ยนรหัสผ่าน</button>
     <button class="btn-secondary" onclick="cloudSyncNow()">🔄 ซิงก์ตอนนี้</button>
     <button class="btn-primary" onclick="cloudLogout()">ออกจากระบบ</button>
   </div></div></div></div>
-<div id="users-modal" class="modal-overlay"><div class="modal modal-wide" style="max-width:560px"><h2>👥 จัดการผู้ใช้และสิทธิ์</h2>
-  <div class="modal-form"><div class="modal-body"><div class="op-help">ผู้สมัครใหม่จะเป็น “ดูอย่างเดียว” — เลือก “แก้ไขได้” ให้เฉพาะคนที่ต้องบันทึกงาน</div><div id="users-list"></div></div>
+<div id="users-modal" class="modal-overlay"><div class="modal modal-wide" style="max-width:980px"><h2>👥 จัดการผู้ใช้และสิทธิ์</h2>
+  <div class="modal-form"><div class="modal-body">
+    <div id="u-sqlwarn" class="op-warn" style="display:none">⚠️ ยังสร้างผู้ใช้/ตั้งแท็บไม่ได้ — ให้รันไฟล์ <b>cloud-users.sql</b> ใน Supabase → SQL Editor ก่อน (ตอนนี้เปลี่ยนได้เฉพาะสิทธิ์)</div>
+    <section id="u-new" class="form-section u-newbox"><div class="fs-title">➕ เพิ่มผู้ใช้ใหม่ <span class="lbl-hint">(ผู้ใช้เข้าระบบด้วยรหัสชั่วคราวนี้ แล้วระบบจะให้ตั้งรหัสผ่านใหม่เอง)</span></div>
+      <div class="form-grid cols-4">
+        <div class="form-group"><label>อีเมล *</label><input type="email" id="u-email" placeholder="name@greenergythailand.com" autocomplete="off"></div>
+        <div class="form-group"><label>ชื่อที่แสดง</label><input type="text" id="u-name" placeholder="เช่น แม็ค" autocomplete="off"></div>
+        <div class="form-group"><label>รหัสผ่านครั้งแรก *</label><div class="opt-row"><input type="text" id="u-pw" autocomplete="off"><button type="button" class="btn-add-opt" title="สุ่มรหัสใหม่" onclick="$('u-pw').value=genPw()">🎲</button></div></div>
+        <div class="form-group"><label>สิทธิ์</label><select id="u-role" onchange="usersRoleChange(this)"><option value="viewer">ดูอย่างเดียว</option><option value="editor">แก้ไขได้</option><option value="admin">ผู้ดูแลระบบ</option></select></div>
+      </div>
+      <div class="form-group"><label>แท็บที่เข้าถึงได้</label><div id="u-newtabs"></div></div>
+      <button type="button" class="btn-primary" onclick="usersCreate()">➕ สร้างผู้ใช้</button>
+    </section>
+    <div class="op-help" style="margin-top:12px"><b>ดูอย่างเดียว</b> = ดูได้อย่างเดียว • <b>แก้ไขได้</b> = เพิ่ม/แก้/ลบงาน • <b>ผู้ดูแลระบบ</b> = ทุกอย่าง + จัดการผู้ใช้ (เห็นทุกแท็บเสมอ) • ติ๊กแท็บออกเพื่อซ่อนแท็บนั้นจากผู้ใช้</div>
+    <div id="users-list"></div>
+  </div>
   <div class="modal-footer modal-footer-sticky"><button class="btn-cancel" onclick="document.getElementById('users-modal').classList.remove('open')">ปิด</button><button class="btn-primary" onclick="saveUsers()">💾 บันทึกสิทธิ์</button></div></div></div></div>
+<div id="cred-modal" class="modal-overlay" style="z-index:900"><div class="modal" style="max-width:460px"><h2 id="cred-t">✅ สร้างผู้ใช้แล้ว</h2>
+  <div class="modal-form"><div class="modal-body"><div class="op-help">คัดลอกข้อความนี้ส่งให้ผู้ใช้ (รหัสผ่านจะแสดงครั้งนี้ครั้งเดียว)</div><textarea id="cred-text" class="cred-text" rows="5" readonly></textarea></div>
+  <div class="modal-footer"><button class="btn-cancel" onclick="document.getElementById('cred-modal').classList.remove('open')">ปิด</button><button class="btn-primary" onclick="credCopy()">📋 คัดลอก</button></div></div></div></div>
+<div id="pw-modal" class="modal-overlay" style="z-index:3100"><div class="modal" style="max-width:420px"><h2 id="pw-title">🔑 เปลี่ยนรหัสผ่าน</h2>
+  <form class="modal-form" onsubmit="event.preventDefault(); savePwChange();"><div class="modal-body">
+    <div id="pw-help" class="op-help">นี่คือการเข้าระบบครั้งแรก — กรุณาตั้งรหัสผ่านของคุณเองก่อนใช้งาน</div>
+    <div class="form-group"><label>รหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)</label><input type="password" id="pw-new" autocomplete="new-password"></div>
+    <div class="form-group" style="margin-top:10px"><label>ยืนยันรหัสผ่านใหม่</label><input type="password" id="pw-new2" autocomplete="new-password"></div>
+    <div id="pw-msg" class="login-msg bad"></div>
+  </div>
+  <div class="modal-footer"><button type="button" id="pw-cancel" class="btn-cancel" onclick="document.getElementById('pw-modal').classList.remove('open')">ยกเลิก</button><button type="button" class="btn-secondary" onclick="cloudLogout()">ออกจากระบบ</button><button type="submit" class="btn-primary">💾 บันทึกรหัสผ่าน</button></div></form></div></div>
 </body>
 </html>
