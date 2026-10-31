@@ -60,6 +60,7 @@
         <div class="wl-toolbar-top">
           <h3>📋 บันทึกงานบำรุงรักษา</h3>
           <span id="wl-count" class="count-chip"></span>
+          <button class="btn-secondary" onclick="woBackfill()" title="สร้างเลข Work Order ให้งานเดิมที่ยังไม่มีเลข (ทั้งบันทึกงานและ Plan PM&amp;AN)">🔢 สร้างเลข WO ให้งานเดิม</button>
           <button class="btn-secondary" id="btn-clear-ppm" style="display:none" onclick="clearPpmSynced()" title="ลบงานที่เคยถูกดึงมาจาก Plan PM&amp;AN (ลบเฉพาะรายการที่ระบบซิงก์เอง)">🧹 ล้างงานที่ดึงจาก PM&amp;AN</button>
           <button class="btn-secondary" onclick="clearWlFilters()" title="ล้างตัวกรองทั้งหมด">↺ ล้างตัวกรอง</button>
           <button class="btn-primary" onclick="openAdd()">➕ เพิ่มงาน</button>
@@ -187,6 +188,7 @@
         <select id="ppm-fowner"  class="filter-sel"><option value="">ทุก Owner</option></select>
         <select id="ppm-fstatus" class="filter-sel"><option value="">ทุกสถานะ</option><option value="done">เสร็จแล้ว</option><option value="inprog">กำลังดำเนินการ</option><option value="pending">ยังไม่เริ่ม</option><option value="postponed">เลื่อน</option></select>
         <span id="ppm-count" class="count-chip"></span>
+        <button class="btn-secondary" onclick="woBackfill()" title="สร้างเลข Work Order ให้งานเดิมที่ยังไม่มีเลข (ทั้งบันทึกงานและ Plan PM&amp;AN)">🔢 สร้างเลข WO ให้งานเดิม</button>
         <button class="btn-primary" onclick="openAddPpm()">➕ เพิ่มงาน</button>
       </div>
       <div class="table-wrap tbl-scroll">

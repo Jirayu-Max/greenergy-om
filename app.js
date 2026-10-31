@@ -113,6 +113,20 @@ function woNext(dateStr, extra) {
   const used = [...records, ...(ppmRecords || []), ...(extra || [])].map(r => String(r.workOrder || '')).filter(w => w.startsWith(pre)).map(w => parseInt(w.slice(pre.length), 10) || 0);
   return pre + String(Math.max(0, ...used) + 1).padStart(3, '0');
 }
+// เติมเลข WO ให้งานเดิมที่ยังไม่มี: Plan PM&AN ก่อน (เรียงตาม Start) แล้วบันทึกงาน — งานที่ดึงมาจาก PM&AN ใช้เลขเดียวกับต้นทาง
+function woBackfill() {
+  const pp = (ppmRecords || []).filter(p => !p.workOrder), rs = records.filter(r => !r.workOrder);
+  if (!pp.length && !rs.length) { alert('ทุกงานมีเลข Work Order ครบแล้ว'); return; }
+  if (!confirm(`สร้างเลข Work Order ให้งานเดิมที่ยังไม่มีเลข\n\n• Plan PM&AN: ${pp.length} งาน\n• บันทึกงาน: ${rs.length} งาน\n\nเรียงตามวันเริ่มงาน รูปแบบ WO-ปปดด-### (งานที่มีเลขอยู่แล้วไม่เปลี่ยน)`)) return;
+  const order = (da, ia, db, ib) => String(da || '9999').localeCompare(String(db || '9999')) || (+ia || 0) - (+ib || 0);
+  pp.sort((a, b) => order(a.start, a.pid, b.start, b.pid)).forEach(p => { p.workOrder = woNext(p.start); });
+  const byPid = new Map((ppmRecords || []).map(p => [p.pid, p]));
+  rs.sort((a, b) => order(a.date, a.id, b.date, b.id)).forEach(r => { const p = r.ppmPid != null && byPid.get(r.ppmPid); r.workOrder = p && p.workOrder ? p.workOrder : woNext(r.date); });
+  if (pp.length) ppmSaveStore();
+  if (rs.length) save();
+  renderCur();
+  toast(`สร้างเลข Work Order แล้ว ${pp.length + rs.length} งาน`);
+}
 const woCell = w => w ? `<span class="wo-chip">${esc(w)}</span>` : '<span style="color:#ccc">-</span>';
 function uniq(arr) { return [...new Set(arr.filter(x=>x && String(x).trim()))]; }
 function typesList() {
