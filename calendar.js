@@ -58,8 +58,67 @@ function renderCalendar() {
         <b>${t>it.start?'◂ ':''}${esc(it.project)}</b><span>${esc(it.activity)}</span><em>${it.op?'👤 '+esc(it.op):'⚠ ไม่ระบุ Operator'}</em></div>`).join('')}</div></div>`;
   }
   $('cal-grid').innerHTML = h;
+  renderCalPlan(items, y, m, dim);
   renderResource(items, y, m, dim);
 }
+
+// ── มุมมองตาราง: แผนปฏิบัติงานประจำเดือน (แถวละ 1 งานต่อวัน) ────────────
+const CAL_VIEW_KEY = 'greenergy_cal_view';
+let calView = 'grid';
+try { calView = localStorage.getItem(CAL_VIEW_KEY) === 'table' ? 'table' : 'grid'; } catch (e) {}
+function calSetView(v) { calView = v; try { localStorage.setItem(CAL_VIEW_KEY, v); } catch (e) {} renderCalendar(); }
+const CP_DOW = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const CP_OPS = 4;                                          // จำนวนช่องผู้ปฏิบัติ (เกินจากนี้รวมไว้ช่องสุดท้าย)
+const CP_TEAM_COLORS = ['#2f5fc4', '#d9772b', '#2e8b57', '#b0417a', '#6b4fc0', '#b8860b', '#c0392b', '#1f8a9e'];
+const cpTeamColor = t => { let h = 0; for (const ch of String(t)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return CP_TEAM_COLORS[h % CP_TEAM_COLORS.length]; };
+const cpCanEdit = () => !(typeof CLOUD !== 'undefined' && CLOUD.on && CLOUD.user && typeof cloudEdit === 'function' && !cloudEdit());
+function cpRec(src, id) { return src === 'ppm' ? (ppmRecords || []).find(x => String(x.pid) === String(id)) : (records || []).find(x => String(x.id) === String(id)); }
+function renderCalPlan(items, y, m, dim) {
+  const box = $('cal-tableview'); if (!box) return;
+  document.querySelectorAll('.cal-viewsw button').forEach(b => b.classList.toggle('on', b.dataset.v === calView));
+  $('tab-calendar').classList.toggle('cal-is-table', calView === 'table');
+  if (calView !== 'table') { box.innerHTML = ''; return; }
+  const edit = cpCanEdit(), dis = edit ? '' : ' disabled', ord = { ppm: 0, an: 1, gen: 2 };
+  let body = '';
+  for (let d = 1; d <= dim; d++) {
+    const t = Date.UTC(y, m, d), day = dfmt(t), w = new Date(y, m, d).getDay();
+    const on = items.filter(i => i.start <= t && t <= i.end)
+      .sort((a, b) => (a.team || '').localeCompare(b.team || '', 'th') || a.project.localeCompare(b.project, 'th') || ord[a.kind] - ord[b.kind]);
+    if (!on.length) continue;
+    on.forEach((it, k) => {
+      const wp = ((cpRec(it.src, it.id) || {}).wp || {})[day] || {};
+      const ops = it.ops.slice(0, CP_OPS - 1).concat(it.ops.length >= CP_OPS ? [it.ops.slice(CP_OPS - 1).join(', ')] : []);
+      while (ops.length < CP_OPS) ops.push('');
+      const a = `data-src="${it.src}" data-id="${esc(it.id)}" data-day="${day}"`;
+      body += `<tr class="${k === 0 ? 'cp-first' : ''}${w === 0 || w === 6 ? ' cp-wk' : ''}">` +
+        (k === 0 ? `<td class="cp-day" rowspan="${on.length}"><b>${CP_DOW[w]}</b><span>${String(d).padStart(2,'0')}/${String(m+1).padStart(2,'0')}/${y}</span></td>` : '') +
+        `<td class="cp-act cp-open" ${a} title="คลิกเพื่อดูรายละเอียด">${esc(it.label)} : ${esc(it.activity || '-')}</td>` +
+        `<td class="cp-prj cp-open" ${a}>Project : ${esc(it.project || '-')}</td>` +
+        ops.map(o => `<td class="cp-op">${esc(o)}</td>`).join('') +
+        `<td class="cp-team"${it.team ? ` style="color:${cpTeamColor(it.team)}"` : ''}>${esc(it.team)}</td>` +
+        `<td class="cp-chk"><input type="checkbox" ${a}${wp.ok ? ' checked' : ''}${dis} onchange="calWpSet(this,'ok',this.checked)"></td>` +
+        `<td class="cp-by"><input type="text" list="cp-ops-list" ${a} value="${esc(wp.by || '')}"${dis} onchange="calWpSet(this,'by',this.value.trim())"></td></tr>`;
+    });
+  }
+  const mm = `${String(m+1).padStart(2,'0')}-${y}`, cols = 6 + CP_OPS;
+  box.innerHTML = `<table class="cp-tbl"><thead>
+    <tr><th class="cp-title" colspan="${cols}">แผนปฏิบัติงานประจำเดือน&nbsp; ${mm}<small>Maintenance</small></th></tr>
+    <tr class="cp-head"><th>วัน/วันที่</th><th colspan="2">รายละเอียดงานที่ต้องปฏิบัติ/ไซต์งาน</th><th colspan="${CP_OPS}">ผู้ปฏิบัติ</th><th>ผรม</th><th>เปิด Work เรียบร้อย</th><th>ผู้รับผิดชอบเปิด Work</th></tr></thead>
+    <tbody>${body || `<tr><td colspan="${cols}" class="empty">ไม่มีงานในเดือนนี้</td></tr>`}</tbody></table>
+    <datalist id="cp-ops-list">${opPickList().map(n => `<option value="${esc(n)}">`).join('')}</datalist>`;
+}
+// บันทึกสถานะเปิด Work แยกรายวัน ไว้ในงานนั้น (r.wp[YYYY-MM-DD]) → ซิงก์ขึ้นคลาวด์พร้อมข้อมูลงาน
+function calWpSet(el, field, val) {
+  const { src, id, day } = el.dataset, r = cpRec(src, id); if (!r) return;
+  const wp = r.wp && typeof r.wp === 'object' ? r.wp : {}, cur = Object.assign({}, wp[day]);
+  if (val) cur[field] = val; else delete cur[field];
+  if (Object.keys(cur).length) wp[day] = cur; else delete wp[day];
+  r.wp = wp;
+  if (src === 'ppm') ppmSaveStore(); else save();
+}
+document.addEventListener('click', e => {
+  const c = e.target.closest && e.target.closest('.cp-open'); if (c) calShowItem(c.dataset.src, c.dataset.id);
+});
 function renderResource(items, y, m, dim) {
   const first = Date.UTC(y, m, 1), last = first + (dim - 1) * DAYMS;
   const mi = items.filter(i => i.end >= first && i.start <= last);

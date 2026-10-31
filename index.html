@@ -97,7 +97,11 @@
       <h3 id="cal-title">–</h3>
       <label class="cal-teamf">Operator <select id="cal-op" class="filter-sel" onchange="renderCalendar()"></select></label>
       <label class="cal-teamf">Subcontractor <select id="cal-team" class="filter-sel" onchange="renderCalendar()"></select></label>
+      <div class="cal-viewsw"><button type="button" data-v="grid" onclick="calSetView('grid')">📅 ปฏิทิน</button><button type="button" data-v="table" onclick="calSetView('table')">📋 ตารางแผนงาน</button></div>
+      <button type="button" class="btn-secondary cal-printbtn" onclick="window.print()">🖨️ พิมพ์</button>
     </div>
+    <div id="cal-tableview" class="cal-plan-wrap"></div>
+    <div id="cal-gridview">
     <div class="cal-legend">
       <span><i class="lg k-an"></i>AN</span><span><i class="lg k-ppm"></i>PPM / QPM</span><span><i class="lg k-gen"></i>งานทั่วไป (บันทึกงาน)</span>
       <span class="hint">🖱️ ลากงานไปวางวันใหม่ได้ — จำนวนวันของงานเดิมคงเดิม (ขยับทั้งช่วง Start–END)</span>
@@ -105,6 +109,7 @@
     <div class="cal-wrap">
       <div class="cal-dow"><div>อา.</div><div>จ.</div><div>อ.</div><div>พ.</div><div>พฤ.</div><div>ศ.</div><div>ส.</div></div>
       <div id="cal-grid" class="cal-grid"></div>
+    </div>
     </div>
     <div class="table-card" style="margin-top:14px">
       <div class="table-header"><h3>👥 Resource Planning — แยกตาม <select id="cal-res-by" class="filter-sel" onchange="renderCalendar()"><option value="team">Subcontractor / ทีม</option><option value="op">Operator</option></select> <span class="hint">(ตัวเลข = จำนวนงานในวันนั้น • สีส้ม/แดง = ทีมมีงานซ้อนกัน)</span></h3></div>
