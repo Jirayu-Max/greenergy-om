@@ -685,7 +685,6 @@ function closeBackup() { $('bk-modal').classList.remove('open'); }
 
 function saveRecord() {
   const date = $('f-start').value;
-  if (!date) { alert('กรุณาระบุวันที่เริ่ม (Start)'); return; }
   const tw = $('f-worktype').value, pj = $('f-project').value;
   const ow = $('f-owner').value,    ops = opsGet('f-ops'), op = ops.join(', ');
   opsRegister(ops);
