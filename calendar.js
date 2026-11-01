@@ -325,10 +325,11 @@ function opsInit(cid, names) {
 }
 function opsAdd(cid, name) {
   const id = 'ops-' + (++opsSeq), d = document.createElement('div'); d.className = 'opt-row ops-row';
-  d.innerHTML = `<select class="ops-sel" id="${id}"></select><button type="button" class="btn-add-opt" title="➕ เพิ่มพนักงานใหม่ในรายชื่อ" onclick="opsNewName('${id}')">＋</button><button type="button" class="ops-rm" title="ลบช่องนี้" onclick="opsRm(this)">➖</button>`;
+  d.innerHTML = `<select class="ops-sel" id="${id}"></select><button type="button" class="btn-add-opt" title="➕ เพิ่มพนักงานใหม่ในรายชื่อ" onclick="opsNewName('${id}')">＋</button><button type="button" class="btn-del-opt" title="ลบรายการที่เลือก (Operator คนนี้ออกจากงาน)" onclick="opsRm(this)">🗑</button>`;
   $(cid).querySelector('.ops-rows').appendChild(d); opsFill($(id), name || '');
 }
-function opsRm(btn) { const row = btn.closest('.ops-row'); if (row.parentNode.children.length > 1) row.remove(); }
+// ลบรายการที่เลือก: มีหลายช่อง → เอาช่องนี้ออก, เหลือช่องเดียว → ล้างค่าให้ว่าง
+function opsRm(btn) { const row = btn.closest('.ops-row'); if (row.parentNode.children.length > 1) row.remove(); else row.querySelector('.ops-sel').value = ''; }
 function opsGet(cid) { const b = $(cid); return b ? uniq([...b.querySelectorAll('.ops-sel')].map(x => x.value).filter(Boolean)) : []; }
 function opsRefreshAll(originId, originVal) { document.querySelectorAll('.ops-sel').forEach(x => opsFill(x, x.id === originId ? originVal : x.value)); }
 function opsNewName(id) { openAddStaff(id); }   // เพิ่มชื่อใหม่ = เพิ่มพนักงานในแท็บรายชื่อ แล้วเลือกให้ในช่องนี้
