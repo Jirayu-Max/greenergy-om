@@ -1028,3 +1028,4 @@ body[data-tab="staff"] .content { max-width: 1500px; }
 .ch-row { display: flex; align-items: center; gap: 12px; padding: 7px 10px; border-radius: 8px; background: #fbf3f2; border: 1px solid #f0d6d2; font-size: 13px; }
 .ch-row b { color: #b0412e; min-width: 150px; } .ch-row span { flex: 1; } .ch-row .btn-del { padding: 3px 9px; }
 @media print { .cp-holbtn { display: none !important; } }
+.wl-strong { font-weight: 700; color: #1f3b30; }

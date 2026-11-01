@@ -463,12 +463,12 @@ function renderWorkLog() {
       <td style="white-space:nowrap;text-align:center">${r.date||'-'}</td>
       <td style="white-space:nowrap;text-align:center">${r.finish||'<span style=\"color:#ccc\">-</span>'}</td>
       <td style="white-space:nowrap;text-align:center">${hasNum(r.slaHours)?(slaActualH(r)!=null?slaActualH(r)+' / ':'')+(+r.slaHours)+' H':(r.slaDue?esc(r.slaDue):'<span style=\"color:#ccc\">-</span>')}</td>
-      <td>${esc(r.project)}</td>
-      <td>${esc(r.owner)}</td>
+      <td class="wl-strong">${esc(r.project)}</td>
+      <td class="wl-strong">${esc(r.owner)}</td>
       <td>${typeChip(r.typeOfWork)}</td>
       <td style="max-width:190px;font-size:11px">${jdCell(r.jobDescriptions)}</td>
       <td style="min-width:340px;max-width:460px;font-size:11px">${detailCell(r.details, r.detailLog)}</td>
-      <td style="white-space:nowrap">${opsBr(r)}</td>
+      <td class="wl-strong" style="white-space:nowrap">${opsBr(r)}</td>
       <td style="text-align:center">${daysPassed(r)}</td>
       <td>${prioBadge(r.priority)}</td>
       <td>${statBadge(r.status)}</td>
@@ -647,7 +647,7 @@ function openAdd() {
   $('modal-title').textContent = '➕ เพิ่มรายการงาน';
   $('rec-form').reset();
   buildSelects(null);
-  $('f-start').value    = today();
+  $('f-start').value    = '';            // รับเรื่องไว้ก่อน ค่อยวางแผนวันเริ่มทีหลัง
   $('f-finish').value   = '';
   $('f-received').value = today();
   $('f-sla-h').value    = '';
@@ -685,6 +685,8 @@ function closeBackup() { $('bk-modal').classList.remove('open'); }
 
 function saveRecord() {
   const date = $('f-start').value;
+  const recv = $('f-received').value;
+  if (!recv) { alert('กรุณาระบุ Received Date (วันที่ได้รับเรื่อง)'); $('f-received').focus(); return; }
   const tw = $('f-worktype').value, pj = $('f-project').value;
   const ow = $('f-owner').value,    ops = opsGet('f-ops'), op = ops.join(', ');
   opsRegister(ops);
@@ -695,7 +697,7 @@ function saveRecord() {
   const isNew = !editId;
   const rec = {
     id:          editId || nextId++,
-    workOrder:   $('f-wo').value.trim() || woNext(date),
+    workOrder:   $('f-wo').value.trim() || woNext(date || recv),
     date,
     finish:      $('f-finish').value,
     received:    $('f-received').value,
