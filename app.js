@@ -174,9 +174,10 @@ function slaEffective(r) {
 }
 function today() { return new Date().toISOString().slice(0,10); }
 
+// นับจาก Received Date (งานเก่าที่ยังไม่มี ใช้ Start Plan) ถึง Finish — ยังไม่มี Finish นับถึงวันนี้
 function daysPassed(r) {
-  if (!r.date) return '-';
-  const start = new Date(r.date);
+  const from = r.received || r.date; if (!from) return '-';
+  const start = new Date(from);
   const end   = r.finish ? new Date(r.finish) : new Date(today());
   const d = Math.round((end - start) / 86400000);
   return (d >= 0 ? d : 0) + ' วัน';
