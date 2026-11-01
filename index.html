@@ -96,7 +96,7 @@
       <div class="table-wrap wl-wrap">
         <table class="zebra">
           <thead><tr>
-            <th>NO.</th><th>Work Order</th><th>Start</th><th>Finish</th><th>Plan</th><th>SLA (H)</th><th>Project</th><th>Owner</th>
+            <th>Received Date</th><th>Work Order</th><th>Start Plan</th><th>Finish</th><th>SLA (H)</th><th>Project</th><th>Owner</th>
             <th>Type of work</th><th>Job Description</th><th>Detail</th><th>Operator</th>
             <th>Days Passed</th><th>Priority</th><th>สถานะ</th><th>SLA</th><th>Report#</th><th>จัดการ</th>
           </tr></thead>
@@ -258,9 +258,9 @@
         <section class="form-section">
           <div class="fs-title">📅 วันที่</div>
           <div class="form-grid cols-4">
-            <div class="form-group"><label>Start (วันที่เริ่ม) *</label><input type="date" id="f-start" required></div>
-            <div class="form-group"><label>Finish (วันที่เสร็จ)</label><input type="date" id="f-finish"></div>
-            <div class="form-group"><label>Plan (วันที่แผนงาน)</label><input type="date" id="f-plan"></div>
+            <div class="form-group"><label>Received Date <span class="lbl-hint">(วันที่ได้รับเรื่อง)</span></label><input type="date" id="f-received"></div>
+            <div class="form-group"><label>Start Plan <span class="lbl-hint">(วันเริ่มงานในแผน)</span> *</label><input type="date" id="f-start" required></div>
+            <div class="form-group"><label>Finish <span class="lbl-hint">(วันจบงานในแผน)</span></label><input type="date" id="f-finish"></div>
             <div class="form-group"><label>SLA (ชม. / H) <span class="lbl-hint">เป้าหมาย</span></label><input type="number" id="f-sla-h" min="0" step="0.5" placeholder="เช่น 24"></div>
           </div>
         </section>
@@ -365,7 +365,7 @@
     <h2 id="drill-title">รายการงาน</h2>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Start</th><th>Finish</th><th>Project</th><th>Type of work</th><th>Detail</th><th>Operator</th><th>สถานะ</th><th>Report#</th><th>จัดการ</th></tr></thead>
+        <thead><tr><th>Start Plan</th><th>Finish</th><th>Project</th><th>Type of work</th><th>Detail</th><th>Operator</th><th>สถานะ</th><th>Report#</th><th>จัดการ</th></tr></thead>
         <tbody id="drill-tbody"></tbody>
       </table>
     </div>

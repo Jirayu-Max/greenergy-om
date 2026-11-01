@@ -21,7 +21,7 @@ function calItems() {
   });
   (records || []).forEach(r => {
     if (r.ppmPid != null) return;
-    const s = dparse(r.plan) ?? dparse(r.date); if (s == null) return;          // วันเริ่มในปฏิทิน = Plan (ถ้าไม่มีใช้ Start)
+    const s = dparse(r.date); if (s == null) return;          // วันเริ่มในปฏิทิน = Start Plan
     let e = dparse(r.finish); if (e == null || e < s) e = s;
     out.push({ src:'job', id:r.id, start:s, end:e, project:r.project||'', activity:(r.jobDescriptions&&r.jobDescriptions[0])||r.typeOfWork||'', team:'', ops:opsOf(r), op:opsOf(r).join(', '), kind:'gen', label:r.typeOfWork||'งานทั่วไป', wo:r.workOrder||'', done:r.status==='เสร็จแล้ว' });
   });
@@ -282,7 +282,7 @@ function calShowItem(src, id) {
     calSel = { src, id: r.id, ops: opsOf(r) };
     $('cd-title').textContent = `📋 ${r.typeOfWork || 'งานทั่วไป'} — ${r.project}`;
     h = row('Work Order', r.workOrder) + row('Project', r.project) + row('Owner', r.owner) + row('Type of work', r.typeOfWork) + row('Job Description', (r.jobDescriptions||[]).join(', ')) +
-      row('Detail', (r.details||[]).join('\n')) + row('Plan (วันเริ่มในปฏิทิน)', r.plan) + row('Start → Finish', `${r.date || '-'} → ${r.finish || '-'}`) + row('Operator', opsOf(r).join(', ')) +
+      row('Detail', (r.details||[]).join('\n')) + row('Received Date', r.received) + row('Start Plan → Finish', `${r.date || '-'} → ${r.finish || '-'}`) + row('Operator', opsOf(r).join(', ')) +
       row('Priority / สถานะ', `${r.priority} / ${r.status}`) + row('SLA', slaEffective(r)) + row('Report#', r.report);
   }
   $('cd-body').innerHTML = h; $('cal-detail').classList.add('open');

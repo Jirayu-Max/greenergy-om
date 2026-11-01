@@ -71,7 +71,7 @@ function migrate(r) {
   if (r.typeOfWork == null) r.typeOfWork = r.workType   || '';
   if (r.owner      == null) r.owner      = '';
   if (r.finish     == null) r.finish     = '';
-  if (r.plan       == null) r.plan       = '';
+  if (r.received   == null) r.received   = '';
   if (r.report     == null) r.report     = 'ยังไม่จัดทำ';
   if (r.slaHours   == null) r.slaHours   = '';   // SLA เป้าหมาย (ชม.)
   if (r.slaActual  == null) r.slaActual  = '';   // SLA ใช้จริง (ชม.) ว่าง = คำนวณ
@@ -454,11 +454,10 @@ function renderWorkLog() {
   $('wl-count').textContent = rows.length + ' รายการ';
   $('wl-tbody').innerHTML = rows.length ? rows.map((r,i) => `
     <tr class="row-click" onclick="rowEdit(event,'rec',${r.id})" title="คลิกเพื่อแก้ไข">
-      <td style="text-align:center">${i+1}</td>
+      <td style="white-space:nowrap;text-align:center">${r.received?esc(r.received):'<span style=\"color:#ccc\">-</span>'}</td>
       <td style="white-space:nowrap">${woCell(r.workOrder)}</td>
       <td style="white-space:nowrap;text-align:center">${r.date||'-'}</td>
       <td style="white-space:nowrap;text-align:center">${r.finish||'<span style=\"color:#ccc\">-</span>'}</td>
-      <td style="white-space:nowrap;text-align:center">${r.plan?esc(r.plan):'<span style=\"color:#ccc\">-</span>'}</td>
       <td style="white-space:nowrap;text-align:center">${hasNum(r.slaHours)?(slaActualH(r)!=null?slaActualH(r)+' / ':'')+(+r.slaHours)+' H':(r.slaDue?esc(r.slaDue):'<span style=\"color:#ccc\">-</span>')}</td>
       <td>${esc(r.project)}</td>
       <td>${esc(r.owner)}</td>
@@ -475,7 +474,7 @@ function renderWorkLog() {
         <button class="btn-edit" onclick="openEdit(${r.id})">✏️</button>
         <button class="btn-del"  onclick="del(${r.id})">🗑️</button>
       </td>
-    </tr>`).join('') : '<tr><td colspan="18" class="empty">ไม่พบรายการ</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="17" class="empty">ไม่พบรายการ</td></tr>';
 }
 
 // ── Daily ─────────────────────────────────────────────────────
@@ -629,7 +628,7 @@ function openAdd() {
   buildSelects(null);
   $('f-start').value    = today();
   $('f-finish').value   = '';
-  $('f-plan').value     = '';
+  $('f-received').value = today();
   $('f-sla-h').value    = '';
   $('f-sla-act').value  = '';
   $('f-wo').value       = ''; $('f-wo').placeholder = woNext(today()) + ' (อัตโนมัติ)';
@@ -647,7 +646,7 @@ function openEdit(id) {
   buildSelects(r);
   $('f-start').value    = r.date;
   $('f-finish').value   = r.finish || '';
-  $('f-plan').value     = r.plan || '';
+  $('f-received').value = r.received || '';
   $('f-sla-h').value    = hasNum(r.slaHours)  ? r.slaHours  : '';
   $('f-sla-act').value  = hasNum(r.slaActual) ? r.slaActual : '';
   $('f-wo').value       = r.workOrder || ''; $('f-wo').placeholder = woNext(r.date) + ' (อัตโนมัติ)';
@@ -679,7 +678,7 @@ function saveRecord() {
     workOrder:   $('f-wo').value.trim() || woNext(date),
     date,
     finish:      $('f-finish').value,
-    plan:        $('f-plan').value.trim(),
+    received:    $('f-received').value,
     project:     pj,
     owner:       ow,
     typeOfWork:  tw,
@@ -760,8 +759,8 @@ function importJSON() {
   inp.click();
 }
 function exportCSV() {
-  const cols = ['id','date','finish','plan','slaHours','slaActual','project','owner','typeOfWork','jobDescriptions','details','operator','priority','status','slaStatus','report'];
-  const head = ['NO.','Start','Finish','Plan','SLA (H)','SLA ใช้จริง (H)','Project','Owner','Type of work','Job Description','Detail','Operator','Priority','Status','SLA Status','Report#'];
+  const cols = ['received','workOrder','date','finish','slaHours','slaActual','project','owner','typeOfWork','jobDescriptions','details','operator','priority','status','slaStatus','report'];
+  const head = ['Received Date','Work Order','Start Plan','Finish','SLA (H)','SLA ใช้จริง (H)','Project','Owner','Type of work','Job Description','Detail','Operator','Priority','Status','SLA Status','Report#'];
   const body = records.map(r => cols.map(c => {
     let v = (c==='jobDescriptions'||c==='details') ? (r[c]||[]).join(' | ') : c==='slaStatus' ? slaEffective(r) : String(r[c]??'');
     v = v.replace(/"/g,'""');
