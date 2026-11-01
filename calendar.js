@@ -51,8 +51,8 @@ function renderCalendar() {
   for (let i = 0; i < weeks * 7; i++) {
     const t = gs + i * DAYMS, d = new Date(t), inM = d.getUTCMonth() === m, wk = d.getUTCDay() === 0 || d.getUTCDay() === 6;
     const day = items.filter(it => it.start <= t && t <= it.end);
-    h += `<div class="cal-cell${inM?'':' out'}${wk?' wkend':''}${t===todayT?' today':''}" data-day="${t}">
-      <div class="cal-dn">${d.getUTCDate()}${day.length?`<span class="cal-cnt">${day.length}</span>`:''}</div>
+    h += `<div class="cal-cell${inM?'':' out'}${wk?' wkend':''}${calHol(dfmt(t))?' hol':''}${t===todayT?' today':''}" data-day="${t}">
+      <div class="cal-dn">${d.getUTCDate()}${calHol(dfmt(t))?`<span class="cal-hol" title="${esc(calHol(dfmt(t)))}">🎌 ${esc(calHol(dfmt(t)))}</span>`:''}${day.length?`<span class="cal-cnt">${day.length}</span>`:''}</div>
       <div class="cal-items">${day.map(it => `<div class="cal-chip k-${it.kind}" draggable="true" data-src="${it.src}" data-id="${it.id}" data-day="${t}"
         title="${esc(it.label+' • '+it.project+' • '+it.activity+' • Operator: '+(it.op||'-')+' • Subcontractor: '+(it.team||'-')+' • '+dfmt(it.start)+' → '+dfmt(it.end))}">
         <b>${t>it.start?'◂ ':''}${esc(it.project)}</b><span>${esc(it.activity)}</span><em>${it.op?'👤 '+esc(it.op):'⚠ ไม่ระบุ Operator'}</em></div>`).join('')}</div></div>`;
@@ -83,7 +83,7 @@ function cpDays(items, y, m, dim) {
     const t = Date.UTC(y, m, d), day = dfmt(t), w = new Date(y, m, d).getDay();
     const on = items.filter(i => i.start <= t && t <= i.end)
       .sort((a, b) => cmp(a.team, b.team) || cmp(a.project, b.project) || (ord[a.kind] || 0) - (ord[b.kind] || 0));
-    if (on.length) out.push({ d, day, w, rows: on.map(it => ({ it, ops: it.ops.map(cpStr), wp: ((cpRec(it.src, it.id) || {}).wp || {})[day] || {} })) });
+    out.push({ d, day, w, hol: calHol(day), rows: on.map(it => ({ it, ops: it.ops.map(cpStr), wp: ((cpRec(it.src, it.id) || {}).wp || {})[day] || {} })) });
   }
   return out;
 }
@@ -105,11 +105,16 @@ function cpTableHtml(days, y, m) {
     return `<label class="cp-opbox${cur ? ' has' : ''}"><span class="cp-opname">${cur ? esc(cur) : '–'}</span><select class="cp-opsel" ${a} data-i="${i}"${dis} onchange="calOpSet(this)"${extra.length ? ` title="รวม: ${esc(extra.join(', '))}"` : ''}><option value="">–</option>${l.map(n => `<option${n === cur ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>${extra.length ? `<small class="cp-more">+${extra.length}</small>` : ''}`;
   };
   let body = '', nJobs = 0, nDone = 0, nWp = 0;
-  days.forEach(({ d, day, w, rows }) => rows.forEach(({ it, ops, wp }, k) => {
+  const canEd = cpCanEdit();
+  days.forEach(({ d, day, w, rows, hol }) => {
+  const wkc = w === 0 || w === 6 ? ' cp-wk' : '', hc = hol ? ' cp-hol' : '';
+  const dayCell = (n, tag = true) => `<td class="cp-day" rowspan="${n}"${canEd ? ` onclick="calHolEdit('${day}')" title="คลิกเพื่อกำหนด / แก้ไขวันหยุด"` : ''}><span class="cp-dow">${CP_DOW[w]}</span><span class="cp-dnum">${d}</span><span class="cp-dmy">${CP_MON[m]} ${y}</span>${hol && tag ? `<span class="cp-holtag">🎌 ${esc(hol)}</span>` : ''}</td>`;
+  if (!rows.length) { body += `<tr class="cp-first cp-empty${wkc}${hc}">${dayCell(1, false)}<td colspan="${cols - 1}" class="cp-none">${hol ? `🎌 ${esc(hol)}` : '— ไม่มีงาน —'}</td></tr>`; return; }
+  rows.forEach(({ it, ops, wp }, k) => {
     nJobs++; if (it.done) nDone++; if (wp.ok) nWp++;
     const a = `data-src="${it.src}" data-id="${esc(it.id)}" data-day="${day}"`;
-    body += `<tr class="${k === 0 ? 'cp-first' : ''}${it.done ? ' cp-done' : ''}${w === 0 || w === 6 ? ' cp-wk' : ''}">` +
-      (k === 0 ? `<td class="cp-day" rowspan="${rows.length}"><span class="cp-dow">${CP_DOW[w]}</span><span class="cp-dnum">${d}</span><span class="cp-dmy">${CP_MON[m]} ${y}</span></td>` : '') +
+    body += `<tr class="${k === 0 ? 'cp-first' : ''}${it.done ? ' cp-done' : ''}${wkc}${hc}">` +
+      (k === 0 ? dayCell(rows.length) : '') +
       `<td class="cp-act cp-open" ${a} title="คลิกเพื่อดูรายละเอียด / แก้ไข"><span class="cp-kind ${CP_KIND[it.kind] || ''}">${esc(it.label)}</span>${esc(it.activity || '-')}` +
         `${it.done ? '<span class="cp-donetag">✓ เสร็จเรียบร้อย</span>' : ''}${it.wo ? `<small class="cp-wo">${esc(it.wo)}</small>` : ''}</td>` +
       `<td class="cp-prj cp-open" ${a}><span class="cp-plbl">Project</span>${esc(it.project || '-')}</td>` +
@@ -117,10 +122,11 @@ function cpTableHtml(days, y, m) {
       `<td class="cp-team">${it.team ? `<span class="cp-pill" style="--c:${cpTeamColor(it.team)}">${esc(it.team)}</span>` : ''}</td>` +
       `<td class="cp-chk"><label class="cp-cb"><input type="checkbox" ${a}${wp.ok ? ' checked' : ''}${dis} onchange="calWpSet(this,'ok',this.checked)"><i></i></label></td>` +
       `<td class="cp-by"><input type="text" list="cp-ops-list" placeholder="—" ${a} value="${esc(wp.by || '')}"${dis} onchange="calWpSet(this,'by',this.value.trim())"></td></tr>`;
-  }));
+  }); });
   const pct = nJobs ? Math.round(nDone / nJobs * 100) : 0;
   return `<div class="cp-sum"><span><b>${nJobs}</b> งาน-วัน</span><span class="ok"><b>${nDone}</b> เสร็จเรียบร้อย (${pct}%)</span><span><b>${nWp}</b> เปิด Work แล้ว</span>
-      <span class="cp-leg"><i class="lg-done"></i>เสร็จเรียบร้อย <i class="lg-wk"></i>เสาร์–อาทิตย์</span></div>
+      <span class="cp-leg"><i class="lg-done"></i>เสร็จเรียบร้อย <i class="lg-wk"></i>เสาร์–อาทิตย์ <i class="lg-hol"></i>วันหยุด</span>
+      <button type="button" class="btn-secondary cp-holbtn" onclick="calHdOpen()">🎌 กำหนดวันหยุด</button></div>
     <table class="cp-tbl"><thead>
     <tr><th class="cp-title" colspan="${cols}"><span class="cp-t1">แผนปฏิบัติงานประจำเดือน ${String(m+1).padStart(2,'0')}-${y}</span><span class="cp-t2">Maintenance · ${MONTHS[m+1]} ${y}</span></th></tr>
     <tr class="cp-head"><th>วัน/วันที่</th><th colspan="2">รายละเอียดงานที่ต้องปฏิบัติ / ไซต์งาน</th><th colspan="${CP_OPS}">ผู้ปฏิบัติ</th><th>ผรม</th><th>เปิด Work<br>เรียบร้อย</th><th>ผู้รับผิดชอบเปิด Work</th></tr></thead>
@@ -151,11 +157,10 @@ async function calExportExcel() {
   let X; try { X = await loadExcelJS(); } catch (e) { alert(e.message); return; }
   const y = calMonth.getFullYear(), m = calMonth.getMonth(), dim = new Date(y, m + 1, 0).getDate();
   const days = cpDays(calFilteredItems(), y, m, dim), mm = `${String(m+1).padStart(2,'0')}-${y}`;
-  if (!days.length) { alert(`ไม่มีงานในเดือน ${MONTHS[m+1]} ${y}`); return; }
   const wb = new X.Workbook(); wb.creator = 'Greenergy O&M';
   const ws = wb.addWorksheet(`แผนงาน ${mm}`, { views: [{ state: 'frozen', ySplit: 3 }],
     pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: .3, right: .3, top: .4, bottom: .4, header: .2, footer: .2 }, printTitlesRow: '1:3' } });
-  const NC = 12, F = 'Tahoma', GREEN = 'FF1F4A39', GOLD = 'FFC9A96E', HEAD = 'FF2A5444', DONE = 'FFE3F2E6', WK = 'FFFBF6EC', DAY = 'FFF4F2EC';
+  const NC = 12, F = 'Tahoma', GREEN = 'FF1F4A39', GOLD = 'FFC9A96E', HEAD = 'FF2A5444', DONE = 'FFE3F2E6', WK = 'FFFBF6EC', DAY = 'FFF4F2EC', HOL = 'FFFBE3E1';
   ws.columns = [16, 44, 20, 15, 11, 11, 11, 11, 10, 13, 22, 16].map(w => ({ width: w }));
   const thin = { style: 'thin', color: { argb: 'FFD5D2C8' } }, thick = { style: 'medium', color: { argb: 'FF3B3B3B' } };
   ws.mergeCells(1, 1, 1, NC); ws.mergeCells(2, 1, 2, NC);
@@ -171,11 +176,22 @@ async function calExportExcel() {
   hr.eachCell(c => { c.font = { name: F, size: 11, bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEAD } };
     c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; c.border = { top: thin, left: thin, right: thin, bottom: { style: 'medium', color: { argb: GOLD } } }; });
   let r = 4;
-  days.forEach(({ d, w, rows }) => {
-    const r0 = r;
+  days.forEach(({ d, w, rows, hol }) => {
+    const r0 = r, dlbl = `${CP_DOW[w]}\n${String(d).padStart(2,'0')}/${String(m+1).padStart(2,'0')}/${y}`;
+    if (!rows.length) {                                   // วันที่ไม่มีงาน → 1 แถว (วันหยุดแสดงชื่อ)
+      const row = ws.getRow(r); row.values = [dlbl, hol ? `🎌 ${hol}` : '']; row.height = 30;
+      for (let col = 1; col <= NC; col++) {
+        const c = row.getCell(col), bg = col === 1 ? DAY : hol ? HOL : (w === 0 || w === 6) ? WK : null;
+        c.font = { name: F, size: 11, bold: col <= 2, color: { argb: hol || w === 0 || w === 6 ? 'FFB0412E' : 'FF2C2C2C' } };
+        c.alignment = { vertical: 'middle', horizontal: col === 1 ? 'center' : 'left', wrapText: col === 1, indent: col === 2 ? 1 : 0 };
+        if (bg) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+        c.border = { left: [1, 2, 5, 9].includes(col) ? thick : thin, right: col === NC ? thick : thin, bottom: thin, top: thick };
+      }
+      r++; return;
+    }
     rows.forEach(({ it, ops, wp }, k) => {
       const ex = ops.slice(CP_OPS - 1), row = ws.getRow(r);
-      row.values = [k === 0 ? `${CP_DOW[w]}\n${String(d).padStart(2,'0')}/${String(m+1).padStart(2,'0')}/${y}` : '', `${it.label} : ${it.activity || '-'}`, it.project || '-', it.wo || '',
+      row.values = [k === 0 ? dlbl + (hol ? `\n🎌 ${hol}` : '') : '', `${it.label} : ${it.activity || '-'}`, it.project || '-', it.wo || '',
         ops[0] || '', ops[1] || '', ops[2] || '', ex.join(', '), it.team || '', wp.ok ? '☑' : '☐', wp.by || '', it.done ? 'เสร็จเรียบร้อย' : ''];
       row.height = 22;
       for (let col = 1; col <= NC; col++) {
@@ -184,7 +200,7 @@ async function calExportExcel() {
           color: { argb: col === 9 && it.team ? 'FF' + cpTeamColor(it.team).slice(1).toUpperCase() : col === 12 ? 'FF1E7B45' : 'FF2C2C2C' } };
         if (col === 10) c.font = { name: 'Segoe UI Symbol', size: 14, color: { argb: wp.ok ? 'FFC00000' : 'FF9A9A9A' } };
         c.alignment = { vertical: 'middle', horizontal: left ? 'left' : 'center', wrapText: col === 1, indent: left ? 1 : 0 };
-        const bg = col === 1 ? DAY : it.done ? DONE : (w === 0 || w === 6) ? WK : null;
+        const bg = col === 1 ? DAY : it.done ? DONE : hol ? HOL : (w === 0 || w === 6) ? WK : null;
         if (bg) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
         c.border = { left: [1, 2, 5, 9].includes(col) ? thick : thin, right: col === NC ? thick : thin, bottom: thin, top: k === 0 ? thick : thin };
       }
@@ -452,3 +468,39 @@ async function opTestFlow() {
   const ok = await flowSend(ev, true); if (keep === undefined) delete opDir.emails['ทดสอบ']; else opDir.emails['ทดสอบ'] = keep; delete (opDir.sent || {})[ev.uid]; opSaveDir();
   if (ok) alert('ส่งคำสั่งทดสอบแล้ว — ตรวจสอบ Calendar ของ ' + to.join(', ') + ' (หรือประวัติการรันใน Power Automate) ภายใน 1–2 นาที');
 }
+
+// ═══ วันหยุด (กำหนดเอง) — ใช้ hdRecords [{date, name}] ร่วมกับ Backup และซิงก์ขึ้นคลาวด์ ═══════
+hdLoad();
+const calHol = day => { const h = (hdRecords || []).find(x => x.date === day); return h ? (h.name || 'วันหยุด') : ''; };
+const calHolFmt = day => { const [y, m, d] = day.split('-'); return `${+d} ${CP_MON[+m - 1]} ${y}`; };
+// คลิกช่องวันที่ในตาราง → กำหนด / แก้ชื่อ / ยกเลิกวันหยุด
+function calHolEdit(day) {
+  const cur = calHol(day);
+  const n = prompt(cur ? `แก้ชื่อวันหยุด ${calHolFmt(day)}\n(ลบข้อความให้ว่างแล้วกดตกลง = ยกเลิกวันหยุด)` : `กำหนด ${calHolFmt(day)} เป็นวันหยุด\nชื่อวันหยุด:`, cur || 'วันหยุด');
+  if (n === null) return;
+  calHdPut(day, n.trim());
+}
+function calHdPut(day, name) {
+  hdRecords = (hdRecords || []).filter(h => h.date !== day);
+  if (name) hdRecords.push({ date: day, name });
+  hdRecords.sort((a, b) => a.date.localeCompare(b.date)); hdSave();
+  renderCalendar(); if ($('ch-modal').classList.contains('open')) calHdRender();
+}
+function calHdOpen() {
+  const y = calMonth.getFullYear(), m = calMonth.getMonth();
+  $('ch-date').value = `${y}-${String(m + 1).padStart(2, '0')}-01`; $('ch-name').value = '';
+  calHdRender(); $('ch-modal').classList.add('open');
+}
+function calHdRender() {
+  const y = String(calMonth.getFullYear()), l = (hdRecords || []).filter(h => h.date.startsWith(y)), ed = cpCanEdit();
+  $('ch-year').textContent = y;
+  $('ch-list').innerHTML = l.length ? l.map(h => { const w = new Date(h.date + 'T00:00:00').getDay();
+    return `<div class="ch-row"><b>${esc(CP_DOW[w])} ${esc(calHolFmt(h.date))}</b><span>${esc(h.name)}</span>${ed ? `<button type="button" class="btn-del" onclick="calHdDel('${h.date}')" title="ยกเลิกวันหยุด">✕</button>` : ''}</div>`; }).join('')
+    : `<div class="hint" style="padding:10px 2px">ยังไม่มีวันหยุดที่กำหนดในปี ${y}</div>`;
+}
+function calHdAdd() {
+  const day = $('ch-date').value, name = $('ch-name').value.trim() || 'วันหยุด';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) { alert('กรุณาเลือกวันที่'); return; }
+  calHdPut(day, name); $('ch-name').value = ''; toast(`กำหนด ${calHolFmt(day)} เป็นวันหยุดแล้ว`);
+}
+function calHdDel(day) { if (confirm(`ยกเลิกวันหยุด ${calHolFmt(day)} (${calHol(day)})?`)) calHdPut(day, ''); }

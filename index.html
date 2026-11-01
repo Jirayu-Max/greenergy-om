@@ -552,6 +552,15 @@
 <datalist id="dl-st-team"></datalist>
 <datalist id="dl-st-pos"></datalist>
 
+<!-- ══ HOLIDAY MODAL ══ -->
+<div id="ch-modal" class="modal-overlay"><div class="modal" style="max-width:520px"><h2>🎌 กำหนดวันหยุด — ปี <span id="ch-year"></span></h2>
+  <div class="modal-form"><div class="modal-body">
+    <div class="op-help">วันหยุดจะแสดงเป็นสีแดงในตารางแผนงาน ปฏิทิน และไฟล์ Excel • คลิกที่ช่องวันที่ในตารางแผนงานเพื่อกำหนด/ยกเลิกได้เช่นกัน</div>
+    <div class="ch-add"><input type="date" id="ch-date"><input type="text" id="ch-name" placeholder="ชื่อวันหยุด เช่น วันปิยมหาราช"><button type="button" class="btn-primary" onclick="calHdAdd()">＋ เพิ่ม</button></div>
+    <div id="ch-list" class="ch-list"></div>
+  </div>
+  <div class="modal-footer"><button type="button" class="btn-cancel" onclick="document.getElementById('ch-modal').classList.remove('open')">ปิด</button></div></div></div></div>
+
 <script src="cloud-config.js"></script>
 <script src="supabase.min.js"></script>
 <script src="projects.js"></script>
