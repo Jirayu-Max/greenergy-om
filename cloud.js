@@ -136,9 +136,9 @@ async function cloudLogin(signup) {
 async function cloudLogout() { await CLOUD.sb.auth.signOut(); location.reload(); }
 async function cloudAfterLogin(user) {
   CLOUD.user = user;
-  let { data, error } = await CLOUD.sb.from('profiles').select('role,email,tabs,must_change_pw').eq('id', user.id).maybeSingle();
+  let { data, error } = await CLOUD.sb.from('profiles').select('role,email,tabs,must_change_pw,display_name').eq('id', user.id).maybeSingle();
   if (error) ({ data } = await CLOUD.sb.from('profiles').select('role,email').eq('id', user.id).maybeSingle());   // ยังไม่ได้รัน cloud-users.sql
-  CLOUD.role = (data && data.role) || 'viewer'; showLogin(false);
+  CLOUD.role = (data && data.role) || 'viewer'; CLOUD.name = (data && data.display_name) || ''; showLogin(false);
   if (data && data.must_change_pw) { openPwChange(true); return; }   // เข้าระบบครั้งแรกด้วยรหัสชั่วคราว → ต้องตั้งรหัสใหม่ก่อน
   cloudApplyTabs(data && data.tabs); cloudState('saving');
   try { await cloudInitialSync(); } catch (e) { console.warn(e); cloudState('error'); alert('เชื่อมต่อคลาวด์ไม่สำเร็จ: ' + (e.message || e)); return; }

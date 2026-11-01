@@ -282,7 +282,7 @@ function calShowItem(src, id) {
     calSel = { src, id: r.id, ops: opsOf(r) };
     $('cd-title').textContent = `📋 ${r.typeOfWork || 'งานทั่วไป'} — ${r.project}`;
     h = row('Work Order', r.workOrder) + row('Project', r.project) + row('Owner', r.owner) + row('Type of work', r.typeOfWork) + row('Job Description', (r.jobDescriptions||[]).join(', ')) +
-      row('Detail', (r.details||[]).join('\n')) + row('Received Date', r.received) + row('Start Plan → Finish', `${r.date || '-'} → ${r.finish || '-'}`) + row('Operator', opsOf(r).join(', ')) +
+      row('Detail', detailsText(r).join('\n')) + row('Received Date', r.received) + row('Start Plan → Finish', `${r.date || '-'} → ${r.finish || '-'}`) + row('Operator', opsOf(r).join(', ')) +
       row('Priority / สถานะ', `${r.priority} / ${r.status}`) + row('SLA', slaEffective(r)) + row('Report#', r.report);
   }
   $('cd-body').innerHTML = h; $('cal-detail').classList.add('open');
@@ -332,7 +332,7 @@ function calEventOf(src, id) {
   const it = calItems().find(i => i.src === src && String(i.id) === String(id)); if (!it) return null;
   const desc = [`Operator: ${it.ops.join(', ') || '-'}`, `ประเภท: ${it.label}`, `ช่วงงาน: ${dfmt(it.start)} – ${dfmt(it.end)}`];
   if (src === 'ppm') { const r = ppmRecords.find(x => String(x.pid) === String(id)) || {}; desc.push(`Subcontractor: ${r.team || '-'}`, `Round: ${r.round || '-'}`, `สถานะ: ${ppmStatusOf(r)} (${Math.round((r.progress||0)*100)}%)`); if (r.remark) desc.push(`หมายเหตุ: ${r.remark}`); }
-  else { const r = records.find(x => String(x.id) === String(id)) || {}; desc.push(`Owner: ${r.owner || '-'}`, `Priority: ${r.priority || '-'}`, ...(r.details && r.details.length ? ['รายละเอียด: ' + r.details.join(' / ')] : [])); }
+  else { const r = records.find(x => String(x.id) === String(id)) || {}; desc.push(`Owner: ${r.owner || '-'}`, `Priority: ${r.priority || '-'}`, ...(r.details && r.details.length ? ['รายละเอียด: ' + detailsText(r).join(' / ')] : [])); }
   return { it, title: `[${it.label}] ${it.project}${it.activity ? ' — ' + it.activity : ''}`, desc: desc.join('\n'), loc: it.project, uid: `${src}-${id}@greenergy-om` };
 }
 const ymd = t => dfmt(t).replace(/-/g, '');

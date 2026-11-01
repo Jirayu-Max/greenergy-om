@@ -236,10 +236,14 @@ function jdCell(arr) {
   if (!arr || !arr.length) return '<span style="color:#ccc">-</span>';
   return `<span title="${esc(arr.join(' • '))}">${esc(arr.map(j=>'• '+j).join('  '))}</span>`;
 }
-function detailCell(arr) {
+// รายละเอียดแต่ละข้อมี วันที่ + ผู้อัปเดต (เก็บใน r.detailLog คู่กับ r.details ตามลำดับ)
+const dlogTxt = m => m && (m.at || m.by) ? [m.at ? fmtStamp(m.at) : '', m.by || ''].filter(Boolean).join(' • ') : '';
+function fmtStamp(iso) { const d = new Date(iso); if (isNaN(d)) return String(iso); const p = n => String(n).padStart(2, '0'); return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+function detailCell(arr, log) {
   if (!arr || !arr.length) return '<span style="color:#ccc">-</span>';
-  return `<span title="${esc(arr.join(' • '))}">${esc(arr.map(j=>'• '+j).join('  '))}</span>`;
+  return arr.map((j, i) => { const m = dlogTxt((log || [])[i]); return `<div class="dt-line">• ${esc(j)}${m ? ` <span class="dt-meta">🕒 ${esc(m)}</span>` : ''}</div>`; }).join('');
 }
+function detailsText(r) { return (r.details || []).map((d, i) => { const m = dlogTxt((r.detailLog || [])[i]); return m ? `${d} [${m}]` : d; }); }
 
 // ── Charts ────────────────────────────────────────────────────
 function mkCharts(data) {
@@ -320,7 +324,7 @@ function renderDrill() {
     <tr>
       <td>${r.date||'-'}</td><td>${r.finish||'-'}</td><td>${esc(r.project)}</td>
       <td>${typeChip(r.typeOfWork)}</td>
-      <td style="max-width:210px;font-size:11px">${detailCell(r.details)}</td>
+      <td style="max-width:210px;font-size:11px">${detailCell(r.details, r.detailLog)}</td>
       <td>${opsBr(r)}</td><td>${statBadge(r.status)}</td><td>${reportBadge(r.report)}</td>
       <td><button class="btn-edit" onclick="openEdit(${r.id})">✏️ แก้ไข</button></td>
     </tr>`).join('') : '<tr><td colspan="9" class="empty">ไม่มีรายการ</td></tr>';
@@ -463,7 +467,7 @@ function renderWorkLog() {
       <td>${esc(r.owner)}</td>
       <td>${typeChip(r.typeOfWork)}</td>
       <td style="max-width:190px;font-size:11px">${jdCell(r.jobDescriptions)}</td>
-      <td style="min-width:340px;max-width:460px;font-size:11px">${detailCell(r.details)}</td>
+      <td style="min-width:340px;max-width:460px;font-size:11px">${detailCell(r.details, r.detailLog)}</td>
       <td style="white-space:nowrap">${opsBr(r)}</td>
       <td style="text-align:center">${daysPassed(r)}</td>
       <td>${prioBadge(r.priority)}</td>
@@ -488,7 +492,7 @@ function renderDaily() {
     <tr>
       <td>${r.finish||'-'}</td><td>${esc(r.project)}</td><td>${esc(r.owner)}</td><td>${typeChip(r.typeOfWork)}</td>
       <td style="font-size:11px">${jdCell(r.jobDescriptions)}</td>
-      <td style="font-size:11px">${detailCell(r.details)}</td><td style="white-space:nowrap">${opsBr(r)}</td>
+      <td style="font-size:11px">${detailCell(r.details, r.detailLog)}</td><td style="white-space:nowrap">${opsBr(r)}</td>
       <td style="text-align:center">${daysPassed(r)}</td>
       <td>${prioBadge(r.priority)}</td><td>${statBadge(r.status)}</td><td>${reportBadge(r.report)}</td>
     </tr>`).join('') : `<tr><td colspan="11" class="empty">ไม่มีรายการสำหรับ ${d}</td></tr>`;
@@ -607,17 +611,34 @@ function delOpt(field, label, selId) {
 }
 
 // ── Multiple Job Description rows ─────────────────────────────
-function addDetail(val='') {
+function addDetail(val='', meta) {
+  if (typeof val !== 'string') val = '';
   const wrap = document.createElement('div');
   wrap.className = 'jd-row';
+  wrap.dataset.orig = val; wrap.dataset.at = (meta && meta.at) || ''; wrap.dataset.by = (meta && meta.by) || '';
+  const m = dlogTxt(meta);
   wrap.innerHTML = `
-    <textarea class="dt-input" rows="3" placeholder="รายละเอียดงาน...">${esc(val)}</textarea>
+    <div class="dt-wrap"><textarea class="dt-input" rows="3" placeholder="รายละเอียดงาน...">${esc(val)}</textarea>
+    <div class="dt-meta">${m ? `🕒 อัปเดตล่าสุด ${esc(m)}` : val ? '🕒 ไม่มีประวัติการอัปเดต (บันทึกก่อนมีระบบนี้)' : `✏️ ใหม่ — จะบันทึกวันที่และผู้อัปเดต (${esc(curUserName() || 'ไม่ระบุ')}) ตอนกดบันทึก`}</div></div>
     <button type="button" class="jd-remove" title="ลบ">🗑</button>`;
   wrap.querySelector('.jd-remove').onclick = () => wrap.remove();
   $('detail-container').appendChild(wrap);
 }
 function collectDetails() {
   return [...document.querySelectorAll('#detail-container .dt-input')].map(i=>i.value.trim()).filter(Boolean);
+}
+// คู่กับ collectDetails(): ข้อเดิมที่ไม่ได้แก้ → คงวันที่/ผู้อัปเดตเดิม, ข้อใหม่หรือแก้ข้อความ → ประทับเวลาปัจจุบัน + ผู้ใช้ที่ล็อกอิน
+function collectDetailLog() {
+  const now = new Date().toISOString(), me = curUserName();
+  return [...document.querySelectorAll('#detail-container .jd-row')].filter(w => w.querySelector('.dt-input').value.trim())
+    .map(w => w.dataset.orig && w.querySelector('.dt-input').value.trim() === w.dataset.orig.trim() ? { at: w.dataset.at, by: w.dataset.by } : { at: now, by: me });
+}
+// ชื่อผู้ใช้ที่ล็อกอิน: ชื่อที่แสดง (จัดการผู้ใช้) → ชื่อในรายชื่อพนักงานที่อีเมลตรงกัน → อีเมล
+function curUserName() {
+  const c = typeof CLOUD !== 'undefined' && CLOUD.user ? CLOUD : null; if (!c) return '';
+  if (c.name) return c.name;
+  const s = typeof staff !== 'undefined' && staff.find(x => x.email && x.email.toLowerCase() === String(c.user.email).toLowerCase());
+  return s ? staffLabel(s) : c.user.email;
 }
 
 // ── CRUD ──────────────────────────────────────────────────────
@@ -654,7 +675,7 @@ function openEdit(id) {
   $('f-status').value   = r.status;
   $('f-report').value   = r.report || 'ยังไม่จัดทำ';
   $('detail-container').innerHTML = '';
-  if (r.details && r.details.length) r.details.forEach(addDetail);
+  if (r.details && r.details.length) r.details.forEach((d, i) => addDetail(d, (r.detailLog || [])[i]));
   else addDetail();
   $('rec-modal').classList.add('open');
 }
@@ -684,6 +705,7 @@ function saveRecord() {
     typeOfWork:  tw,
     jobDescriptions: $('f-jobdesc').value ? [$('f-jobdesc').value] : [],
     details:     collectDetails(),
+    detailLog:   collectDetailLog(),
     operator:    op,
     operators:   ops,
     priority:    $('f-priority').value,
@@ -762,7 +784,7 @@ function exportCSV() {
   const cols = ['received','workOrder','date','finish','slaHours','slaActual','project','owner','typeOfWork','jobDescriptions','details','operator','priority','status','slaStatus','report'];
   const head = ['Received Date','Work Order','Start Plan','Finish','SLA (H)','SLA ใช้จริง (H)','Project','Owner','Type of work','Job Description','Detail','Operator','Priority','Status','SLA Status','Report#'];
   const body = records.map(r => cols.map(c => {
-    let v = (c==='jobDescriptions'||c==='details') ? (r[c]||[]).join(' | ') : c==='slaStatus' ? slaEffective(r) : String(r[c]??'');
+    let v = c==='details' ? detailsText(r).join(' | ') : c==='jobDescriptions' ? (r[c]||[]).join(' | ') : c==='slaStatus' ? slaEffective(r) : String(r[c]??'');
     v = v.replace(/"/g,'""');
     return /[,"\n]/.test(v) ? `"${v}"` : v;
   }).join(','));
