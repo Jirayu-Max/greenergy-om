@@ -1029,3 +1029,21 @@ body[data-tab="staff"] .content { max-width: 1500px; }
 .ch-row b { color: #b0412e; min-width: 150px; } .ch-row span { flex: 1; } .ch-row .btn-del { padding: 3px 9px; }
 @media print { .cp-holbtn { display: none !important; } }
 .wl-strong { font-weight: 700; color: #1f3b30; }
+
+/* ═══ v20: ปรับงานรายวัน ═══ */
+.cp-offbtn { display: none; margin-left: 8px; font: inherit; font-size: 11px; font-weight: 700; color: #b0412e; background: #fff; border: 1px solid #e9b8b2; border-radius: 999px; padding: 1px 8px; cursor: pointer; vertical-align: 1px; }
+.cp-tbl tr:hover .cp-offbtn { display: inline-block; }
+.cp-offbtn:hover { background: #b0412e; color: #fff; }
+.cp-daytag { display: inline-block; margin-top: 3px; margin-right: 6px; font-size: 11px; font-weight: 700; color: #9a6b12; background: #fdf3dc; border: 1px solid #f0dcaa; border-radius: 6px; padding: 1px 7px; }
+.cp-daytag a { color: #35654E; cursor: pointer; margin-left: 4px; text-decoration: underline; }
+.cd-day { grid-column: 1 / -1; margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: #faf8f3; border: 1px solid #ece6d8; display: grid; gap: 9px; }
+.cd-day-h { font-weight: 800; color: #2a5444; }
+.cd-day-lbl { font-size: 12px; font-weight: 700; color: #6b6b6b; margin-right: 6px; }
+.cd-day-ops, .cd-day-offs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cd-day-ops .filter-sel { height: 28px; font-size: 12px; }
+.cd-day-note { font-size: 12px; color: #9a6b12; }
+.cd-day-act { display: flex; gap: 8px; flex-wrap: wrap; } .cd-day-act .btn-del { padding: 8px 14px; }
+.cd-day-off { color: #b0412e; font-weight: 700; display: flex; gap: 10px; align-items: center; }
+.cd-off { font-size: 12px; color: #b0412e; background: #fbe3e1; border: 1px solid #f0d6d2; border-radius: 999px; padding: 2px 9px; }
+.cd-off a { cursor: pointer; font-weight: 700; color: #35654E; }
+@media print { .cp-offbtn, .cp-daytag a { display: none !important; } }
