@@ -20,12 +20,13 @@ create table if not exists public.app_data (
   updated_by text
 );
 
--- 3) ประวัติทุกเวอร์ชัน (กันข้อมูลหาย/ย้อนกลับได้) เก็บ 90 วัน
+-- 3) ประวัติ (กันข้อมูลหาย/ย้อนกลับได้) ชุดละไม่เกิน 1 เวอร์ชันต่อชั่วโมง เก็บ 30 วัน
 create table if not exists public.app_data_history (
   id bigserial primary key,
   key text not null, value jsonb, version int, updated_by text,
   saved_at timestamptz not null default now()
 );
+create index if not exists app_data_history_key_saved on public.app_data_history (key, saved_at desc);
 
 create or replace function public.my_role() returns text
 language sql stable security definer set search_path = public as
@@ -43,8 +44,11 @@ create trigger on_auth_user_created after insert on auth.users for each row exec
 create or replace function public.keep_history() returns trigger
 language plpgsql security definer set search_path = public as
 $$ begin
-  insert into public.app_data_history(key, value, version, updated_by) values (old.key, old.value, old.version, old.updated_by);
-  delete from public.app_data_history where saved_at < now() - interval '90 days';
+  if old.value is distinct from new.value
+     and not exists (select 1 from public.app_data_history where key = old.key and saved_at > now() - interval '1 hour') then
+    insert into public.app_data_history(key, value, version, updated_by) values (old.key, old.value, old.version, old.updated_by);
+  end if;
+  delete from public.app_data_history where saved_at < now() - interval '30 days';
   return new;
 end $$;
 drop trigger if exists app_data_history_trg on public.app_data;

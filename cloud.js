@@ -83,9 +83,18 @@ async function cloudFetchAll() {
   const { data, error } = await CLOUD.sb.from('app_data').select('key,value,version');
   if (error) throw error; return Object.fromEntries((data || []).map(r => [r.key, r]));
 }
+// เช็กเฉพาะเลขเวอร์ชัน (ไม่กี่ไบต์) แล้วโหลดเนื้อหาเฉพาะชุดที่เปลี่ยน — ประหยัดโควตา egress ของ Supabase
+async function cloudFetchChanged() {
+  const { data, error } = await CLOUD.sb.from('app_data').select('key,version');
+  if (error) throw error;
+  const keys = (data || []).filter(r => COL[r.key] && r.version !== CLOUD.ver[r.key]).map(r => r.key);
+  if (!keys.length) return {};
+  const res = await CLOUD.sb.from('app_data').select('key,value,version').in('key', keys);
+  if (res.error) throw res.error; return Object.fromEntries((res.data || []).map(r => [r.key, r]));
+}
 function applyRemote(key, row) { COL[key].set(row.value); CLOUD.base[key] = J(COL[key].get()); CLOUD.ver[key] = row.version; }
 async function cloudPull(rows) {
-  rows = rows || await cloudFetchAll(); let changed = false;
+  rows = rows || await cloudFetchChanged(); let changed = false;
   for (const key of Object.keys(COL)) {
     const row = rows[key]; if (!row || row.version === CLOUD.ver[key]) continue;
     const local = COL[key].get(), dirty = CLOUD.base[key] !== undefined && J(local) !== CLOUD.base[key];
@@ -113,7 +122,7 @@ async function cloudPush(key, tries = 0) {
     else { const { data, error } = await CLOUD.sb.from('app_data').update({ value: val, version: v + 1, updated_by: email, updated_at: new Date().toISOString() }).eq('key', key).eq('version', v).select('version'); if (error) throw error; if (data && data.length) { CLOUD.ver[key] = v + 1; ok = true; } }
     if (ok) { CLOUD.base[key] = s; cloudDone(); }
     else {                                                        // ชนกับคนอื่น → ดึงล่าสุดมารวม (cloudPull จะคิวบันทึกซ้ำให้เอง)
-      CLOUD.busy[key] = false; await cloudPull(await cloudFetchAll()); return;
+      CLOUD.busy[key] = false; await cloudPull(await cloudFetchChanged()); return;
     }
   } catch (e) { console.warn('push', key, e); cloudState('error'); CLOUD.timers[key] = setTimeout(() => cloudPush(key, 0), 8000); }
   finally { CLOUD.busy[key] = false; }
