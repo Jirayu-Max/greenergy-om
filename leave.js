@@ -54,7 +54,7 @@ function renderLeave() {
     const sums = Object.keys(LV_TYPES).map(t => { const n = mine.filter(l => l.type === t).reduce((a, l) => a + lvDays(l, yFirst, yLast), 0); return `<td class="lv-sum">${n ? lvFmt(n) : ''}</td>`; }).join('');
     return `<tr><td class="lv-name"><b>${esc(staffLabel(s))}</b><small>${esc(s.team || '')}</small></td>${cells}${sums}</tr>`;
   }).join('');
-  $('lv-grid').innerHTML = ppl.length ? `<table class="lv-tbl"><thead>${head}</thead><tbody>${body}</tbody></table>` : `<div class="st-empty">${staff.length ? 'ไม่มีพนักงานในทีมที่เลือก' : 'ยังไม่มีรายชื่อพนักงาน — เพิ่มที่แท็บ 👥 รายชื่อพนักงานก่อน'}</div>`;
+  if ($('lv-grid')) $('lv-grid').innerHTML = ppl.length ? `<table class="lv-tbl"><thead>${head}</thead><tbody>${body}</tbody></table>` : `<div class="st-empty">${staff.length ? 'ไม่มีพนักงานในทีมที่เลือก' : 'ยังไม่มีรายชื่อพนักงาน — เพิ่มที่แท็บ 👥 รายชื่อพนักงานก่อน'}</div>`;
   // รายการลาของเดือน
   const list = inMonth.slice().sort((a, b) => a.from.localeCompare(b.from) || a.lid - b.lid);
   $('lv-count').textContent = `${list.length} รายการ`;
