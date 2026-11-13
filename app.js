@@ -809,7 +809,7 @@ function importJSON() {
         if (Array.isArray(data.holidays)) localStorage.setItem(HDKEY, JSON.stringify(data.holidays));
         if (data.operatorDir && typeof data.operatorDir==='object' && typeof opSaveDir==='function') { opDir = Object.assign({ emails:{}, organizer:'', flowUrl:'', autoSend:false, sent:{} }, data.operatorDir); opSaveDir(); }
         if (Array.isArray(data.welfare)) { welfare = data.welfare; welNextId = Math.max(0, ...welfare.map(w => w.wid || 0)) + 1; welSave(); }
-        if (data.welfareCfg && typeof data.welfareCfg === 'object') { welCfg = Object.assign({}, WEL_DEF, data.welfareCfg); welCfgSave(); }
+        if (data.welfareCfg && typeof data.welfareCfg === 'object') { welCfg = welCfgFix(data.welfareCfg); welCfgSave(); }
         if (Array.isArray(data.staff)) { staff = data.staff.map(staffNorm); staffNextId = Math.max(0, ...staff.map(s => s.sid || 0)) + 1; staffSave(); }
         if (Array.isArray(data.planpm)) { ppmRecords = data.planpm; ppmSaveStore(); planpmInit(); }
         nextId = Math.max(0, ...records.map(r=>r.id))+1;

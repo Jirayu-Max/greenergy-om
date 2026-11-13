@@ -20,7 +20,7 @@ const COL = {
   opdir:    { get: () => ({ emails: opDir.emails || {}, organizer: opDir.organizer || '', sent: opDir.sent || {} }), set: v => { opDir.emails = v.emails || {}; opDir.organizer = v.organizer || ''; opDir.sent = v.sent || {}; _orig.opSaveDir(); } },
   staff:    { idKey: 'sid', get: () => staff, set: v => { staff = v.map(staffNorm); staffNextId = Math.max(0, ...staff.map(s => s.sid || 0)) + 1; _orig.staffSave(); }, empty: v => !v.length },
   welfare:  { idKey: 'wid', get: () => welfare, set: v => { welfare = Array.isArray(v) ? v : []; welNextId = Math.max(0, ...welfare.map(w => w.wid || 0)) + 1; _orig.welSave(); }, empty: v => !v.length },
-  welfareCfg: { get: () => welCfg, set: v => { welCfg = Object.assign({}, WEL_DEF, v || {}); _orig.welCfgSave(); } },
+  welfareCfg: { get: () => welCfg, set: v => { welCfg = welCfgFix(v); _orig.welCfgSave(); } },
   holidays: { get: () => hdRecords, set: v => { hdRecords = Array.isArray(v) ? v : []; _orig.hdSave(); }, empty: v => !v.length },
   flow:     { get: () => ({ flowUrl: opDir.flowUrl || '', autoSend: !!opDir.autoSend }), set: v => { opDir.flowUrl = v.flowUrl || ''; opDir.autoSend = !!v.autoSend; _orig.opSaveDir(); }, secret: true },   // อ่านได้เฉพาะผู้แก้ไข (RLS)
 };

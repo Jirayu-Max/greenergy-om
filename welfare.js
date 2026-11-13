@@ -3,11 +3,13 @@
 // welfare    = [{ wid, sid, date, amount, category, item, note, by, at }]   รายการที่ใช้
 // welfareCfg = { amount, rollover, exclude:[sid] }                          ตั้งค่า (rollover = ยอดเหลือสะสมข้ามเดือนภายในปีเดียวกัน)
 const WEL_KEY = 'greenergy_welfare', WEL_CFG_KEY = 'greenergy_welfare_cfg';
-const WEL_DEF = { amount: 500, rollover: false, exclude: [] };
+const WEL_DEF = { amount: 500, rollover: true, exclude: [], ver: 2, since: '2026-11' };   // since = เดือนแรกที่เริ่มให้สวัสดิการ
+// ver 2: ค่าเริ่มต้นเปลี่ยนเป็นสะสมภายในปี — ตั้งค่าที่สร้างก่อนหน้านี้ (ยังไม่มีใครเลือกเอง) ปรับตามไปด้วย
+const welCfgFix = c => { const old = !c || c.ver !== 2; c = Object.assign({}, WEL_DEF, c || {}); if (old) { c.rollover = true; c.ver = 2; } return c; };
 const WEL_CATS = ['อาหาร / เครื่องดื่ม', 'กิจกรรมทีม', 'ค่ารักษาพยาบาล', 'อุปกรณ์ / ของใช้', 'ค่าเดินทาง', 'อื่น ๆ'];
 let welfare = [], welNextId = 1, welCfg = Object.assign({}, WEL_DEF), welMonth = today().slice(0, 7), welEditId = null;
 try { const d = JSON.parse(localStorage.getItem(WEL_KEY) || '[]'); if (Array.isArray(d)) welfare = d; } catch (e) {}
-try { const c = JSON.parse(localStorage.getItem(WEL_CFG_KEY) || 'null'); if (c && typeof c === 'object') welCfg = Object.assign({}, WEL_DEF, c); } catch (e) {}
+try { const c = JSON.parse(localStorage.getItem(WEL_CFG_KEY) || 'null'); if (c && typeof c === 'object') welCfg = welCfgFix(c); } catch (e) {}
 welNextId = Math.max(0, ...welfare.map(w => w.wid || 0)) + 1;
 function welSave() { try { localStorage.setItem(WEL_KEY, JSON.stringify(welfare)); } catch (e) {} }
 function welCfgSave() { try { localStorage.setItem(WEL_CFG_KEY, JSON.stringify(welCfg)); } catch (e) {} }
@@ -16,7 +18,7 @@ const welBaht = n => (Math.round((+n || 0) * 100) / 100).toLocaleString('th-TH',
 const welMonLbl = ym => { const [y, m] = ym.split('-'); return `${MONTHS[+m]} ${y}`; };
 const welMonEnd = ym => { const [y, m] = ym.split('-').map(Number); return `${ym}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`; };
 // มีสิทธิ์ในเดือนนั้น: อยู่ในรายชื่อ ไม่ถูกตัดสิทธิ์ และเริ่มงานแล้ว (ก่อนสิ้นเดือน)
-const welEligible = (s, ym) => !(welCfg.exclude || []).includes(s.sid) && !(s.start && s.start > welMonEnd(ym));
+const welEligible = (s, ym) => !(welCfg.since && ym < welCfg.since) && !(welCfg.exclude || []).includes(s.sid) && !(s.start && s.start > welMonEnd(ym));
 const welUsed = (sid, from, to) => welfare.filter(w => w.sid === sid && w.date >= from && w.date <= to).reduce((a, w) => a + (+w.amount || 0), 0);
 // สิทธิ์ของเดือน: ไม่สะสม = งบเดือนนี้ • สะสม = งบตั้งแต่ ม.ค. (หรือเดือนที่เริ่มงาน) ถึงเดือนนี้ หักที่ใช้ไปก่อนหน้าในปีเดียวกัน
 function welBalance(s, ym) {
@@ -44,7 +46,7 @@ function renderWelfare() {
   $('wel-k-budget').textContent = '฿' + welBaht(tBudget);
   $('wel-k-used').textContent = '฿' + welBaht(tUsed);
   $('wel-k-left').textContent = '฿' + welBaht(tBudget - tUsed);
-  $('wel-k-sub').textContent = welCfg.rollover ? `฿${welBaht(welCfg.amount)}/คน/เดือน • ยอดเหลือสะสมได้ภายในปี` : `฿${welBaht(welCfg.amount)}/คน/เดือน • ไม่สะสมข้ามเดือน`;
+  $('wel-k-sub').textContent = welCfg.rollover ? `฿${welBaht(welCfg.amount)}/คน/เดือน • ยอดเหลือสะสมได้ภายในปี${welCfg.since ? ' • เริ่ม ' + welMonLbl(welCfg.since) : ''}` : `฿${welBaht(welCfg.amount)}/คน/เดือน • ไม่สะสมข้ามเดือน`;
   $('wel-people').innerHTML = bal.length ? bal.map(({ s, budget, used, left, yearUsed }) => {
     const pct = budget > 0 ? Math.min(100, Math.round(used / budget * 100)) : (used ? 100 : 0), cls = left < 0 ? 'over' : pct >= 80 ? 'warn' : '';
     return `<div class="wel-card ${cls}" style="--tc:${staffTeamColor(s.team)}">
@@ -110,7 +112,7 @@ function welDel(wid) {
 
 // ── ตั้งค่า ─────────────────────────────────────────────────
 function welCfgOpen() {
-  $('wel-c-amount').value = welCfg.amount; $('wel-c-roll').checked = !!welCfg.rollover;
+  $('wel-c-amount').value = welCfg.amount; $('wel-c-since').value = welCfg.since || ''; $('wel-c-roll').checked = !!welCfg.rollover;
   $('wel-c-list').innerHTML = staff.slice().sort((a, b) => staffLabel(a).localeCompare(staffLabel(b), 'th'))
     .map(s => `<label class="u-tab"><input type="checkbox" value="${s.sid}"${(welCfg.exclude || []).includes(s.sid) ? '' : ' checked'}><span>${esc(staffLabel(s))}</span></label>`).join('') || '<em>ยังไม่มีรายชื่อพนักงาน</em>';
   $('wel-cfg').classList.add('open');
@@ -118,7 +120,7 @@ function welCfgOpen() {
 function welCfgSaveForm() {
   const amount = +$('wel-c-amount').value; if (!(amount >= 0)) { alert('กรุณาระบุงบต่อคนต่อเดือน'); return; }
   const exclude = [...document.querySelectorAll('#wel-c-list input')].filter(i => !i.checked).map(i => +i.value);
-  welCfg = { amount, rollover: $('wel-c-roll').checked, exclude }; welCfgSave();
+  welCfg = { amount, rollover: $('wel-c-roll').checked, exclude, ver: 2, since: $('wel-c-since').value || '' }; welCfgSave();
   $('wel-cfg').classList.remove('open'); renderWelfare(); toast('บันทึกการตั้งค่าสวัสดิการแล้ว');
 }
 
