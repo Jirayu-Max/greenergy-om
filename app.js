@@ -113,19 +113,56 @@ function woNext(dateStr, extra) {
   const used = [...records, ...(ppmRecords || []), ...(extra || [])].map(r => String(r.workOrder || '')).filter(w => w.startsWith(pre)).map(w => parseInt(w.slice(pre.length), 10) || 0);
   return pre + String(Math.max(0, ...used) + 1).padStart(3, '0');
 }
-// เติมเลข WO ให้งานเดิมที่ยังไม่มี: Plan PM&AN ก่อน (เรียงตาม Start) แล้วบันทึกงาน — งานที่ดึงมาจาก PM&AN ใช้เลขเดียวกับต้นทาง
-function woBackfill() {
-  const pp = (ppmRecords || []).filter(p => !p.workOrder), rs = records.filter(r => !r.workOrder);
-  if (!pp.length && !rs.length) { alert('ทุกงานมีเลข Work Order ครบแล้ว'); return; }
-  if (!confirm(`สร้างเลข Work Order ให้งานเดิมที่ยังไม่มีเลข\n\n• Plan PM&AN: ${pp.length} งาน\n• บันทึกงาน: ${rs.length} งาน\n\nเรียงตามวันเริ่มงาน รูปแบบ WO-ปปดด-### (งานที่มีเลขอยู่แล้วไม่เปลี่ยน)`)) return;
+// ── รูปแบบ Work Order: WO-ปปดด-ลำดับ-<รหัส Type of work>-<รหัส Project> เช่น WO-2604-042-CMWTY-TAP-C ──
+const WO_WORDS = { WARRANTY: 'WTY', WTY: 'WTY' };
+function woAutoCode(name, kind) {
+  const s = String(name || '').trim(); if (!s) return '';
+  if (kind === 'project') return s.toUpperCase().replace(/\s+/g, '-').replace(/[^\p{L}\p{N}-]/gu, '').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 16);
+  const words = s.toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+  if (!words.length) return s.replace(/\s+/g, '').slice(0, 6);
+  if (words.length === 1) return WO_WORDS[words[0]] || words[0].slice(0, 3);
+  return words.map(w => WO_WORDS[w] || (/^\d+$/.test(w) ? w : w[0])).join('');
+}
+const woCodeMap = kind => ((options.woCodes || {})[kind]) || {};
+const woCode = (kind, name) => String(woCodeMap(kind)[name] || '').trim() || woAutoCode(name, kind);
+const WO_BASE = /^(WO-\d{4}-\d{3,})/;
+function woCompose(base, type, project) { const sx = [woCode('type', type), woCode('project', project)].filter(Boolean).join('-'); return sx ? `${base}-${sx}` : base; }
+// เลขที่พิมพ์เองแบบอื่นคงไว้ • ว่าง → ออกเลขใหม่ • รูปแบบ WO-ปปดด-### → คงเลขเดิม ต่อท้ายรหัสตาม Type of work / Project ปัจจุบัน
+function woFor(cur, dateStr, type, project, extra) {
+  const c = String(cur || '').trim(), m = WO_BASE.exec(c);
+  if (c && !m) return c;
+  return woCompose(m ? m[1] : woNext(dateStr, extra), type, project);
+}
+// สร้างเลขให้งานที่ยังไม่มี + ปรับเลขเดิมให้มีรหัส Type of work / Project ต่อท้าย (Plan PM&AN ก่อน แล้ว Corrective maintenance)
+function woBackfill(quiet) {
+  const pp = ppmRecords || [], byPid = new Map(pp.map(p => [p.pid, p]));
   const order = (da, ia, db, ib) => String(da || '9999').localeCompare(String(db || '9999')) || (+ia || 0) - (+ib || 0);
-  pp.sort((a, b) => order(a.start, a.pid, b.start, b.pid)).forEach(p => { p.workOrder = woNext(p.start); });
-  const byPid = new Map((ppmRecords || []).map(p => [p.pid, p]));
-  rs.sort((a, b) => order(a.date, a.id, b.date, b.id)).forEach(r => { const p = r.ppmPid != null && byPid.get(r.ppmPid); r.workOrder = p && p.workOrder ? p.workOrder : woNext(r.date); });
-  if (pp.length) ppmSaveStore();
-  if (rs.length) save();
-  renderCur();
-  toast(`สร้างเลข Work Order แล้ว ${pp.length + rs.length} งาน`);
+  const newP = pp.filter(p => !p.workOrder).length, newR = records.filter(r => !r.workOrder).length;
+  const fixP = pp.filter(p => p.workOrder && woFor(p.workOrder, p.start, p.type, p.plant) !== p.workOrder).length;
+  const fixR = records.filter(r => r.workOrder && woFor(r.workOrder, r.date || r.received, r.typeOfWork, r.project) !== r.workOrder).length;
+  if (!newP && !newR && !fixP && !fixR) { if (!quiet) alert('เลข Work Order ของทุกงานเป็นรูปแบบล่าสุดแล้ว'); return; }
+  if (!confirm(`อัปเดตเลข Work Order\n\n• สร้างเลขใหม่ให้งานที่ยังไม่มี: Plan PM&AN ${newP} • Corrective maintenance ${newR}\n• ต่อท้ายรหัสงานและโครงการให้เลขเดิม: Plan PM&AN ${fixP} • Corrective maintenance ${fixR}\n\nรูปแบบ WO-ปปดด-###-รหัสงาน-รหัสโครงการ (เลขลำดับเดิมไม่เปลี่ยน)`)) return;
+  [...pp].sort((a, b) => order(a.start, a.pid, b.start, b.pid)).forEach(p => { p.workOrder = woFor(p.workOrder, p.start, p.type, p.plant); });
+  [...records].sort((a, b) => order(a.received || a.date, a.id, b.received || b.date, b.id)).forEach(r => {
+    const p = r.ppmPid != null && byPid.get(r.ppmPid);
+    r.workOrder = !r.workOrder && p && p.workOrder ? p.workOrder : woFor(r.workOrder, r.date || r.received, r.typeOfWork, r.project);
+  });
+  ppmSaveStore(); save(); renderCur();
+  toast(`อัปเดตเลข Work Order แล้ว ${newP + newR + fixP + fixR} งาน`);
+}
+// ── ตั้งรหัสที่ใช้ต่อท้าย Work Order ──
+function woCodesOpen() {
+  const types = uniq([...typesList(), ...DEFAULT_TYPES, ...(ppmRecords || []).map(p => p.type)]).sort((a, b) => a.localeCompare(b, 'th'));
+  const projs = uniq([...records.map(r => r.project), ...(ppmRecords || []).map(p => p.plant), ...(options.project || []), ...(pjRecords || []).map(p => p.name)]).sort((a, b) => String(a).localeCompare(String(b), 'th'));
+  const rows = (kind, list) => list.map(n => `<tr><td>${esc(n)}</td><td><input type="text" class="wc-in" data-kind="${kind}" data-name="${esc(n)}" value="${esc(woCodeMap(kind)[n] || '')}" placeholder="${esc(woAutoCode(n, kind))}"></td></tr>`).join('');
+  $('wc-type').innerHTML = rows('type', types); $('wc-proj').innerHTML = rows('project', projs);
+  $('wc-modal').classList.add('open');
+}
+function woCodesSave() {
+  const out = { type: {}, project: {} };
+  document.querySelectorAll('#wc-modal .wc-in').forEach(i => { const v = i.value.trim().toUpperCase().replace(/\s+/g, '-'); if (v) out[i.dataset.kind][i.dataset.name] = v; });
+  options.woCodes = out; saveOpts(); $('wc-modal').classList.remove('open'); toast('บันทึกรหัส Work Order แล้ว');
+  woBackfill(true);
 }
 const woCell = w => w ? `<span class="wo-chip">${esc(w)}</span>` : '<span style="color:#ccc">-</span>';
 function uniq(arr) { return [...new Set(arr.filter(x=>x && String(x).trim()))]; }
@@ -653,7 +690,7 @@ function openAdd() {
   $('f-received').value = today();
   $('f-sla-h').value    = '';
   $('f-sla-act').value  = '';
-  $('f-wo').value       = ''; $('f-wo').placeholder = woNext(today()) + ' (อัตโนมัติ)';
+  $('f-wo').value       = ''; $('f-wo').placeholder = woNext(today()) + '-รหัสงาน-รหัสโครงการ (อัตโนมัติ)';
   $('f-status').value   = 'เสร็จแล้ว';
   $('f-priority').value = 'Medium';
   $('f-report').value   = 'ยังไม่จัดทำ';
@@ -671,7 +708,7 @@ function openEdit(id) {
   $('f-received').value = r.received || '';
   $('f-sla-h').value    = hasNum(r.slaHours)  ? r.slaHours  : '';
   $('f-sla-act').value  = hasNum(r.slaActual) ? r.slaActual : '';
-  $('f-wo').value       = r.workOrder || ''; $('f-wo').placeholder = woNext(r.date) + ' (อัตโนมัติ)';
+  $('f-wo').value       = r.workOrder || ''; $('f-wo').placeholder = woNext(r.date || r.received) + '-รหัสงาน-รหัสโครงการ (อัตโนมัติ)';
   $('f-priority').value = r.priority;
   $('f-status').value   = r.status;
   $('f-report').value   = r.report || 'ยังไม่จัดทำ';
@@ -698,7 +735,7 @@ function saveRecord() {
   const isNew = !editId;
   const rec = {
     id:          editId || nextId++,
-    workOrder:   $('f-wo').value.trim() || woNext(date || recv),
+    workOrder:   woFor($('f-wo').value, date || recv, tw, pj),
     date,
     finish:      $('f-finish').value,
     received:    $('f-received').value,
@@ -742,7 +779,7 @@ function del(id) {
 function rawJSON(k, fb) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? fb : v; } catch(e) { return fb; } }
 function exportJSON() {
   const payload = {version:8, exported:new Date().toISOString(), records, options, projects:pjRecords,
-    workplan:rawJSON(WPKEY,null), holidays:rawJSON(HDKEY,[]), planpm:ppmRecords, operatorDir: (typeof opDir!=='undefined'?opDir:null), staff};
+    workplan:rawJSON(WPKEY,null), holidays:rawJSON(HDKEY,[]), planpm:ppmRecords, operatorDir: (typeof opDir!=='undefined'?opDir:null), staff, welfare, welfareCfg: welCfg};
   dl(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}), `maintenance_backup_${today()}.json`);
 }
 function importJSON() {
@@ -771,6 +808,8 @@ function importJSON() {
         if (data.workplan) localStorage.setItem(WPKEY, JSON.stringify(data.workplan));   // เก็บข้อมูลเดิมไว้ (หน้าถูกนำออกแล้ว)
         if (Array.isArray(data.holidays)) localStorage.setItem(HDKEY, JSON.stringify(data.holidays));
         if (data.operatorDir && typeof data.operatorDir==='object' && typeof opSaveDir==='function') { opDir = Object.assign({ emails:{}, organizer:'', flowUrl:'', autoSend:false, sent:{} }, data.operatorDir); opSaveDir(); }
+        if (Array.isArray(data.welfare)) { welfare = data.welfare; welNextId = Math.max(0, ...welfare.map(w => w.wid || 0)) + 1; welSave(); }
+        if (data.welfareCfg && typeof data.welfareCfg === 'object') { welCfg = Object.assign({}, WEL_DEF, data.welfareCfg); welCfgSave(); }
         if (Array.isArray(data.staff)) { staff = data.staff.map(staffNorm); staffNextId = Math.max(0, ...staff.map(s => s.sid || 0)) + 1; staffSave(); }
         if (Array.isArray(data.planpm)) { ppmRecords = data.planpm; ppmSaveStore(); planpmInit(); }
         nextId = Math.max(0, ...records.map(r=>r.id))+1;
@@ -1687,7 +1726,7 @@ function savePpm() {
       ptype: $('pp-ptype').value.trim(), region: $('pp-region').value.trim(), province: $('pp-province').value.trim(),
       status: v('pp-status'),
     };
-    rec.workOrder = v('pp-wo').trim() || woNext(rec.start, out);
+    rec.workOrder = woFor(v('pp-wo'), rec.start, rec.type, rec.plant, out);
     if (old) Object.keys(old).forEach(key => { if (!(key in rec)) rec[key] = old[key]; });
     out.push(rec);
   });
@@ -1757,7 +1796,7 @@ function switchTab(tab) {
 }
 function renderCur() {
   ({dashboard:renderDashboard, worklog:renderWorkLog, calendar:(window.renderCalendar||(()=>{})),
-    projects:renderProjects, planpm:renderPlanPM, staff:renderStaff}[curTab]||(()=>{}))();
+    projects:renderProjects, planpm:renderPlanPM, staff:renderStaff, welfare:renderWelfare}[curTab]||(()=>{}))();
 }
 
 // ── Helpers ───────────────────────────────────────────────────

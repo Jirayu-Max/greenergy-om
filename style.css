@@ -1047,3 +1047,31 @@ body[data-tab="staff"] .content { max-width: 1500px; }
 .cd-off { font-size: 12px; color: #b0412e; background: #fbe3e1; border: 1px solid #f0d6d2; border-radius: 999px; padding: 2px 9px; }
 .cd-off a { cursor: pointer; font-weight: 700; color: #35654E; }
 @media print { .cp-offbtn, .cp-daytag a { display: none !important; } }
+
+/* ═══ v21: รหัส Work Order ═══ */
+.wc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
+.wc-grid h4 { margin: 0 0 6px; color: #2a5444; }
+.wc-grid .op-tbl input { text-transform: uppercase; font-family: Consolas, monospace; }
+@media (max-width: 700px) { .wc-grid { grid-template-columns: 1fr; } }
+
+/* ═══ v22: สวัสดิการพนักงาน ═══ */
+body[data-tab="welfare"] .content { max-width: 1500px; }
+.wel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.wel-nav { display: flex; align-items: center; gap: 6px; } .wel-nav h2 { margin: 0 0 0 10px; color: #2a5444; font-size: 22px; }
+.wel-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.wel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; padding: 14px; }
+.wel-card { --tc: #35654E; display: flex; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid #e6e2d8; border-left: 4px solid var(--tc); border-radius: 12px; background: #fff; }
+.wel-ph { flex: 0 0 52px; height: 52px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, var(--tc), #2a5444); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #c9a96a; }
+.wel-ph img { width: 100%; height: 100%; object-fit: cover; } .wel-ph span { color: #fff; font-weight: 700; font-size: 20px; }
+.wel-main { flex: 1; min-width: 0; }
+.wel-name { font-weight: 700; color: #1f3b30; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wel-team { font-size: 11.5px; color: #8a8f88; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wel-bar { height: 7px; border-radius: 999px; background: #edf2ee; margin: 7px 0 4px; overflow: hidden; } .wel-bar i { display: block; height: 100%; background: #2e9b5b; border-radius: 999px; }
+.wel-card.warn .wel-bar i { background: #d9a22b; } .wel-card.over .wel-bar i { background: #c0392b; }
+.wel-nums { display: flex; justify-content: space-between; font-size: 12px; color: #555; gap: 6px; } .wel-nums b { color: #1e7b45; }
+.wel-card.over .wel-nums b { color: #c0392b; }
+.wel-year { font-size: 11px; color: #9a8a6c; margin-top: 2px; }
+.wel-add { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+.wel-amt { text-align: right; font-weight: 700; white-space: nowrap; color: #1f3b30; }
+.wel-note { font-size: 11.5px; color: #8a8f88; }
+.wel-left { margin-top: 10px; font-size: 13px; font-weight: 700; color: #2a5444; }

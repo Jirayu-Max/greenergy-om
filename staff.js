@@ -34,7 +34,7 @@ function staffTenure(start) {
   return y || mm ? [y ? `${y} ปี` : '', mm ? `${mm} เดือน` : ''].filter(Boolean).join(' ') : 'ไม่ถึง 1 เดือน';
 }
 const staffDate = d => { if (!/^\d{4}-\d{2}-\d{2}$/.test(d || '')) return '-'; const [y, m, dd] = d.split('-'); return `${+dd} ${['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][+m - 1]} ${+y + 543}`; };
-const staffInitial = s => (String(s.nick || s.first || s.firstEn || '?').trim()[0] || '?').toUpperCase();
+const staffInitial = s => (String(s.nick || s.first || s.firstEn || '?').trim().replace(/^[เ-ไ]+/, '')[0] || '?').toUpperCase();   // ข้ามสระหน้า เ แ โ ใ ไ
 const staffTeamColor = t => (typeof cpTeamColor === 'function' ? cpTeamColor(t) : '#35654E');
 const staffTeams = () => uniq(staff.map(s => stT(s.team))).sort((a, b) => a.localeCompare(b, 'th'));
 const staffJobs = s => { const l = staffLabel(s); return [...records, ...(ppmRecords || [])].filter(r => opsOf(r).includes(l)).length; };

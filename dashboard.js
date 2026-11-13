@@ -1,7 +1,7 @@
 'use strict';
 // ═══ Executive Dashboard ═══════════════════════════════════════════
 // นิยาม (ใช้เหมือนกันทั้งหน้า):
-//  งานซ่อม/บำรุงรักษา (บันทึกงาน):  เข้ามา = Start อยู่ในช่วง • แก้ไขแล้ว = สถานะ “เสร็จแล้ว” และ Finish อยู่ในช่วง
+//  งานซ่อม/บำรุงรักษา (บันทึกงาน):  เข้ามา = Received Date อยู่ในช่วง • แก้ไขแล้ว = สถานะ “เสร็จแล้ว” และ Finish อยู่ในช่วง
 //                                   ค้าง = ยังไม่เสร็จ ณ วันสิ้นสุดช่วง (รวมที่ค้างมาจากก่อนช่วงนี้)
 //  PM & AN (Plan PM&AN):            แผน(เข้ามา) = Start อยู่ในช่วง • เสร็จ / เลื่อน ตามสถานะ • ค้าง = ยังไม่เสร็จ/ไม่เลื่อน ที่ถึงกำหนดแล้ว
 let dashPeriod = 'year';
@@ -19,7 +19,7 @@ function dashRange() {
   else if (dashPeriod === 'month') from = t.slice(0, 8) + '01';
   else if (dashPeriod === 'year') from = t.slice(0, 4) + '-01-01';
   else if (dashPeriod === 'all') {
-    const ds = [...records.map(r => r.date), ...(ppmRecords||[]).map(r => r.start)].filter(Boolean).sort();
+    const ds = [...records.map(wlIn), ...(ppmRecords||[]).map(r => r.start)].filter(Boolean).sort();
     from = ds[0] || t;
   } else { from = $('db-start').value || t.slice(0, 4) + '-01-01'; to = $('db-end').value || t; }
   if (from > to) [from, to] = [to, from];
@@ -34,13 +34,15 @@ function dashSetPeriod(p, silent) {
 }
 
 // ── ตัวชี้วัดงานซ่อม ───────────────────────────────────────────────
-const wlPool = () => records.filter(r => r.ppmPid == null);
-const wlDoneAt = r => r.status === 'เสร็จแล้ว' ? (r.finish || r.date) : null;
+// ใช้งานทุกรายการในหน้า Corrective maintenance และนับวันเข้ามาจาก Received Date (งานเก่าที่ไม่มี ใช้ Start Plan) ให้ตรงกับหน้านั้น
+const wlPool = () => records;
+const wlIn = r => r.received || r.date || '';
+const wlDoneAt = r => r.status === 'เสร็จแล้ว' ? (r.finish || r.date || r.received) : null;
 function wlMetrics(from, to) {
   const inR = x => x && x >= from && x <= to, pool = wlPool();
-  const incoming = pool.filter(r => inR(r.date));
+  const incoming = pool.filter(r => inR(wlIn(r)));
   const resolved = pool.filter(r => inR(wlDoneAt(r)));
-  const backlog  = pool.filter(r => r.date <= to && !(r.status === 'เสร็จแล้ว' && (r.finish || r.date) <= to));
+  const backlog  = pool.filter(r => wlIn(r) <= to && !(r.status === 'เสร็จแล้ว' && (wlDoneAt(r) || '') <= to));
   return { incoming, resolved, backlog };
 }
 // ── ตัวชี้วัด PM & AN ──────────────────────────────────────────────
@@ -104,7 +106,7 @@ function goWorklogFilter(opts) {          // ไปหน้าบันทึ�
   switchTab('worklog'); msInitAll(); renderWorkLog();
 }
 const hbar = (v, mx, cls) => `<div class="hb"><i class="${cls || ''}" style="width:${mx ? Math.max(v ? 4 : 0, v / mx * 100) : 0}%"></i></div>`;
-const avgDays = list => { const a = list.filter(r => r.finish && r.date).map(r => daysBetween(r.date, r.finish)); return a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length * 10) / 10 : null; };
+const avgDays = list => { const a = list.filter(r => r.finish && wlIn(r)).map(r => daysBetween(wlIn(r), r.finish)); return a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length * 10) / 10 : null; };
 
 function renderExec() {
   const root = $('exec-root'); if (!root) return;
@@ -113,10 +115,10 @@ function renderExec() {
   const cur = wlMetrics(R.from, R.to), prv = R.prev ? wlMetrics(R.prev.from, R.prev.to) : null;
   const inc = cur.incoming.length, res = cur.resolved.length, bl = cur.backlog.length;
   const rate = inc ? Math.round(res / inc * 100) : null;
-  const blCarry = cur.backlog.filter(r => r.date < R.from).length;
+  const blCarry = cur.backlog.filter(r => wlIn(r) < R.from).length;
   const blIn = cur.backlog.filter(r => r.status === 'กำลังดำเนินการ').length, blPend = cur.backlog.filter(r => r.status === 'รอดำเนินการ').length;
   const blSla = cur.backlog.filter(r => slaEffective(r) === SLA_BREACH).length;
-  const blOld = cur.backlog.filter(r => daysBetween(r.date, R.to) > 30).length;
+  const blOld = cur.backlog.filter(r => daysBetween(wlIn(r), R.to) > 30).length;
   const slaMet = cur.resolved.filter(r => slaEffective(r) === SLA_MET).length, slaBr = cur.resolved.filter(r => slaEffective(r) === SLA_BREACH).length;
   const sla = slaMet + slaBr ? Math.round(slaMet / (slaMet + slaBr) * 100) : null;
 
@@ -170,13 +172,13 @@ function renderExec() {
     </tbody></table>${noJd ? `<div class="el-note">มี ${noJd} งานที่ไม่ได้ระบุ Job Description</div>` : ''}</div>`;
 
   const sumLines = [
-    `🔧 <b>งานซ่อม/บำรุงรักษา</b> — เข้ามา <b>${inc}</b> งาน • แก้ไขแล้ว <b>${res}</b> งาน${rate != null ? ` (${rate}%)` : ''} • ค้างอยู่ <b>${bl}</b> งาน${blSla ? ` (เกิน SLA ${blSla})` : ''}`,
+    `🔧 <b>Corrective maintenance</b> — เข้ามา <b>${inc}</b> งาน • แก้ไขแล้ว <b>${res}</b> งาน${rate != null ? ` (${rate}%)` : ''} • ค้างอยู่ <b>${bl}</b> งาน${blSla ? ` (เกิน SLA ${blSla})` : ''}`,
     `📅 <b>PM</b> — แผน <b>${PM.planned.length}</b> • เสร็จ <b>${PM.done.length}</b> • เลื่อน <b>${PM.post.length}</b> • ค้าง <b>${PM.open.length}</b> &nbsp;|&nbsp; <b>AN</b> — แผน <b>${AN.planned.length}</b> • เสร็จ <b>${AN.done.length}</b> • เลื่อน <b>${AN.post.length}</b> • ค้าง <b>${AN.open.length}</b>`,
   ];
   root.innerHTML = `
     <div class="exec-sum"><div class="es-h">📌 สรุปสำหรับผู้บริหาร <span>${fmtD(R.from)} – ${fmtD(R.to)} (${R.len} วัน)${R.prev ? ` • เทียบกับ ${fmtD(R.prev.from)} – ${fmtD(R.prev.to)}` : ''}</span></div>${sumLines.map(l => `<div class="es-l">${l}</div>`).join('')}</div>
 
-    <div class="sec-h">🔧 งานซ่อม / บำรุงรักษา (Work Log) <span>เข้ามากี่งาน • แก้ไขไปกี่งาน • ค้างอีกกี่งาน</span></div>
+    <div class="sec-h">🔧 Corrective maintenance <span>เข้ามากี่งาน • แก้ไขไปกี่งาน • ค้างอีกกี่งาน</span></div>
     <div class="egrid5">
       ${big('blue', '📥', 'งานเข้ามา', inc, 'งานใหม่ที่เริ่มในช่วงนี้', dDelta(inc, prv && prv.incoming.length, null))}
       ${big('moss', '✅', 'แก้ไขแล้ว', res, 'ปิดงานได้ในช่วงนี้', dDelta(res, prv && prv.resolved.length, true))}
@@ -193,7 +195,7 @@ function renderExec() {
 
     <div class="sec-h">🚨 รายการที่ผู้บริหารควรติดตาม</div>
     <div class="egrid3">
-      <div class="elist"><div class="el-h">🔧 งานซ่อมค้างสำคัญ <a onclick="goWorklogBacklog()">ดูทั้งหมด (${bl}) ›</a></div>${topWl.length ? topWl.map(r => `<div class="el-i" onclick="openEdit(${r.id})"><b>${esc(r.project || '-')}</b><span>${esc(r.typeOfWork || '')} • ค้าง ${daysBetween(r.date, R.to)} วัน</span><em class="pr-${esc(r.priority)}">${esc(r.priority)}</em></div>`).join('') : '<div class="el-n">ไม่มีงานซ่อมค้าง ✓</div>'}</div>
+      <div class="elist"><div class="el-h">🔧 งานซ่อมค้างสำคัญ <a onclick="goWorklogBacklog()">ดูทั้งหมด (${bl}) ›</a></div>${topWl.length ? topWl.map(r => `<div class="el-i" onclick="openEdit(${r.id})"><b>${esc(r.project || '-')}</b><span>${esc(r.typeOfWork || '')} • ค้าง ${daysBetween(wlIn(r), R.to)} วัน</span><em class="pr-${esc(r.priority)}">${esc(r.priority)}</em></div>`).join('') : '<div class="el-n">ไม่มีงานซ่อมค้าง ✓</div>'}</div>
       <div class="elist"><div class="el-h">🛠️ PM/AN เลยกำหนด <a onclick="switchTab('planpm')">ไปหน้า Plan ›</a></div>${topPm.length ? topPm.map(r => `<div class="el-i" onclick="openEditPpm(${r.pid})"><b>${esc(r.plant)}</b><span>${esc(r.type)} • ${esc(r.activity || '')} • กำหนด ${esc(fmtD(ppmDue(r)))}</span><em>${esc(r.team || '')}</em></div>`).join('') : '<div class="el-n">ไม่มีงานเลยกำหนด ✓</div>'}</div>
       <div class="elist"><div class="el-h">📑 สัญญา O&amp;M <a onclick="switchTab('projects')">Alert Center ›</a></div>
         <div class="el-big"><div class="${omExp.length ? 'bad' : ''}"><b>${omExp.length}</b><span>หมดอายุแล้ว</span></div><div class="${omSoon.length ? 'warn' : ''}"><b>${omSoon.length}</b><span>หมดภายใน 90 วัน</span></div></div>
@@ -204,9 +206,9 @@ function renderExec() {
   const B = dashBuckets(R.from, R.to), pool = wlPool();
   const cnt = (arr, f, b) => arr.filter(r => { const x = f(r); return x && x >= b.s && x <= b.e; }).length;
   dashChart('exFlow', { type: 'bar', data: { labels: B.map(b => b.label), datasets: [
-    { label: 'งานเข้า', data: B.map(b => cnt(pool, r => r.date, b)), backgroundColor: '#2E6DB4', borderRadius: 3, order: 2 },
+    { label: 'งานเข้า', data: B.map(b => cnt(pool, wlIn, b)), backgroundColor: '#2E6DB4', borderRadius: 3, order: 2 },
     { label: 'แก้ไขแล้ว', data: B.map(b => cnt(pool, wlDoneAt, b)), backgroundColor: '#35654E', borderRadius: 3, order: 2 },
-    { label: 'ค้างสะสม', type: 'line', data: B.map(b => pool.filter(r => r.date <= b.e && !(r.status === 'เสร็จแล้ว' && (r.finish || r.date) <= b.e)).length), borderColor: '#D9542C', backgroundColor: '#D9542C', tension: .25, pointRadius: 3, order: 1 } ] },
+    { label: 'ค้างสะสม', type: 'line', data: B.map(b => pool.filter(r => wlIn(r) <= b.e && !(r.status === 'เสร็จแล้ว' && (wlDoneAt(r) || '') <= b.e)).length), borderColor: '#D9542C', backgroundColor: '#D9542C', tension: .25, pointRadius: 3, order: 1 } ] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#f0ede8' } }, x: { grid: { display: false } } } } });
   const all = ppmRecords || [];
   const inB = (r, b) => r.start && r.start >= b.s && r.start <= b.e;
