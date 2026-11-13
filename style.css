@@ -1113,3 +1113,5 @@ body[data-tab="leave"] .content { max-width: none; }
 .lv-tbl .lv-sum { min-width: 40px; font-weight: 700; background: #faf8f3; }
 .lv-tbl thead .lv-sum { background: #f4efe3; }
 .lv-type { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #fff; background: var(--c); }
+.rs-c.rs-lv { background: var(--c); color: #fff; font-weight: 800; }
+.rs-c.rs-lvx { box-shadow: inset 0 0 0 2px #7a0000; }

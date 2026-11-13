@@ -230,8 +230,12 @@ document.addEventListener('click', e => {
 function renderResource(items, y, m, dim) {
   const first = Date.UTC(y, m, 1), last = first + (dim - 1) * DAYMS;
   const mi = items.filter(i => i.end >= first && i.start <= last);
-  const by = ($('cal-res-by') || {}).value || 'team', keys = i => by === 'op' ? (() => { const o = uniq([...i.ops, ...Object.values(i.wp || {}).flatMap(w => w && Array.isArray(w.ops) ? w.ops : [])]); return o.length ? o : ['(ไม่ระบุ Operator)']; })() : [i.team || '(ไม่ระบุทีม)'];
-  const teams = uniq(mi.flatMap(keys)).sort();
+  const by = ($('cal-res-by') || {}).value || 'team', keys = i => by === 'op' ? (() => { const o = uniq([...i.ops, ...Object.values(i.wp || {}).flatMap(w => w && Array.isArray(w.ops) ? w.ops : [])]); return o.length ? uniq(o.map(staffResolve)) : ['(ไม่ระบุ Operator)']; })() : [i.team || '(ไม่ระบุทีม)'];
+  // แยกตาม Operator: แสดงวันที่ลา (ล) จากตารางลา และเพิ่มแถวให้คนที่ลาแม้ไม่มีงานในเดือนนี้
+  const mFirst = dfmt(first), mLast = dfmt(last), lvIn = by === 'op' && typeof leaves !== 'undefined' ? leaves.filter(l => l.from <= mLast && (l.to || l.from) >= mFirst) : [];
+  const lvLabel = l => { const s = staff.find(x => x.sid === l.sid); return s ? staffLabel(s) : ''; };
+  const teams = uniq([...mi.flatMap(keys), ...lvIn.map(lvLabel)]).sort();
+  const lvAt = (tm, d) => { const s = staffFind(tm); return s ? lvIn.find(l => l.sid === s.sid && lvCovers(l, d) && lvWorkday(d)) : null; };
   if (!teams.length) { $('cal-res').innerHTML = '<div class="empty">ไม่มีงานในเดือนนี้</div>'; return; }
   let head = `<tr><th class="rs-team">${by === 'op' ? 'Operator' : 'Subcontractor'}</th>`;
   for (let d = 1; d <= dim; d++) { const w = new Date(y, m, d).getDay(); head += `<th class="${w===0||w===6?'wk':''}">${d}</th>`; }
@@ -239,8 +243,12 @@ function renderResource(items, y, m, dim) {
   const rows = teams.map(tm => {
     const its = mi.filter(i => keys(i).includes(tm)); let busy = 0, cells = '';
     for (let d = 1; d <= dim; d++) {
-      const t = Date.UTC(y, m, d), on = its.filter(i => itOn(i, t) && (by !== 'op' || (itOps(i, t).length ? itOps(i, t).includes(tm) : tm === '(ไม่ระบุ Operator)'))), w = new Date(y, m, d).getDay();
+      const t = Date.UTC(y, m, d), on = its.filter(i => itOn(i, t) && (by !== 'op' || (itOps(i, t).length ? itOps(i, t).map(staffResolve).includes(tm) : tm === '(ไม่ระบุ Operator)'))), w = new Date(y, m, d).getDay(), lv = by === 'op' ? lvAt(tm, dfmt(t)) : null;
       if (on.length) busy++;
+      if (lv) {                                            // ลา: แสดง ล (กรอบแดง = มีงานซ้อนวันลา)
+        const lt = LV_TYPES[lv.type] || LV_TYPES.personal, tip = lt.th + (lv.half ? ` (${LV_HALF[lv.half]})` : '') + (lv.reason ? ` • ${lv.reason}` : '') + (on.length ? `\n⚠️ มีงานวันนี้: ${on.map(i => i.project + ' · ' + i.activity).join(', ')}` : '');
+        cells += `<td class="rs-c rs-lv${on.length ? ' rs-lvx' : ''}" style="--c:${lt.c}" title="${esc(tip)}">ล</td>`; continue;
+      }
       cells += `<td class="rs-c${on.length>2?' h3':on.length===2?' h2':on.length?' h1':''}${w===0||w===6?' wk':''}"${on.length?` title="${esc(on.map(i=>i.project+' · '+i.activity).join('\n'))}"`:''}>${on.length||''}</td>`;
     }
     return `<tr><td class="rs-team">${esc(tm)}</td>${cells}<td class="rs-s">${its.length}</td><td class="rs-s">${busy}/${dim}</td><td class="rs-s">${Math.round(busy/dim*100)}%</td></tr>`;
