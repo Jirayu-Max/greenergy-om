@@ -1093,3 +1093,23 @@ body[data-tab="welfare"] .content { max-width: 1500px; }
 .wel-pk input { accent-color: #35654E; } .wel-pkn { flex: 1; min-width: 0; line-height: 1.25; } .wel-pkn small { display: block; font-size: 10.5px; color: #8a8f88; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wel-pk b { font-size: 12px; color: #1e7b45; white-space: nowrap; }
 #wel-f-mode { height: 38px; border: 1px solid var(--border); border-radius: 8px; padding: 0 8px; font: inherit; font-size: 13px; }
+
+/* ═══ v24: ตารางลา ═══ */
+body[data-tab="leave"] .content { max-width: none; }
+.kpi-card.danger { border-top-color: #d9542c; } .kpi-card.danger .kpi-value { color: #d9542c; }
+.lv-wrap { overflow: auto; padding: 0 0 6px; }
+.lv-tbl { border-collapse: separate; border-spacing: 0; font-size: 12px; min-width: 100%; }
+.lv-tbl th, .lv-tbl td { border-right: 1px solid #eee9de; border-bottom: 1px solid #eee9de; text-align: center; min-width: 28px; height: 34px; padding: 0 2px; }
+.lv-tbl thead th { position: sticky; top: 0; z-index: 2; background: #2a5444; color: #fff; font-weight: 700; line-height: 1.1; padding: 4px 2px; }
+.lv-tbl thead th small { display: block; font-size: 9.5px; font-weight: 400; opacity: .8; }
+.lv-tbl thead th.wk, .lv-tbl thead th.hol { background: #6d4b3a; }
+.lv-tbl .lv-name { position: sticky; left: 0; z-index: 1; background: #fff; text-align: left; min-width: 190px; padding: 3px 10px; border-right: 2px solid #e2dccd; }
+.lv-tbl thead .lv-name { z-index: 3; background: #2a5444; }
+.lv-tbl .lv-name b { display: block; color: #1f3b30; white-space: nowrap; } .lv-tbl .lv-name small { color: #8a8f88; font-size: 10.5px; white-space: nowrap; }
+.lv-tbl td.wk { background: #f6f2ea; } .lv-tbl td.hol { background: #fbe3e1; }
+.lv-tbl td[onclick] { cursor: pointer; } .lv-tbl td[onclick]:not(.lv-on):hover { background: #eef5f0; }
+.lv-tbl td.lv-on { background: var(--c); color: #fff; font-weight: 800; font-size: 13px; }
+.lv-tbl td.lv-on:hover { filter: brightness(1.1); }
+.lv-tbl .lv-sum { min-width: 40px; font-weight: 700; background: #faf8f3; }
+.lv-tbl thead .lv-sum { background: #f4efe3; }
+.lv-type { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #fff; background: var(--c); }

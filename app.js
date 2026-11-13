@@ -779,7 +779,7 @@ function del(id) {
 function rawJSON(k, fb) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? fb : v; } catch(e) { return fb; } }
 function exportJSON() {
   const payload = {version:8, exported:new Date().toISOString(), records, options, projects:pjRecords,
-    workplan:rawJSON(WPKEY,null), holidays:rawJSON(HDKEY,[]), planpm:ppmRecords, operatorDir: (typeof opDir!=='undefined'?opDir:null), staff, welfare, welfareCfg: welCfg};
+    workplan:rawJSON(WPKEY,null), holidays:rawJSON(HDKEY,[]), planpm:ppmRecords, operatorDir: (typeof opDir!=='undefined'?opDir:null), staff, welfare, welfareCfg: welCfg, leaves};
   dl(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}), `maintenance_backup_${today()}.json`);
 }
 function importJSON() {
@@ -808,6 +808,7 @@ function importJSON() {
         if (data.workplan) localStorage.setItem(WPKEY, JSON.stringify(data.workplan));   // เก็บข้อมูลเดิมไว้ (หน้าถูกนำออกแล้ว)
         if (Array.isArray(data.holidays)) localStorage.setItem(HDKEY, JSON.stringify(data.holidays));
         if (data.operatorDir && typeof data.operatorDir==='object' && typeof opSaveDir==='function') { opDir = Object.assign({ emails:{}, organizer:'', flowUrl:'', autoSend:false, sent:{} }, data.operatorDir); opSaveDir(); }
+        if (Array.isArray(data.leaves)) { leaves = data.leaves; lvNextId = Math.max(0, ...leaves.map(l => l.lid || 0)) + 1; lvSave(); }
         if (Array.isArray(data.welfare)) { welfare = data.welfare; welNextId = Math.max(0, ...welfare.map(w => w.wid || 0)) + 1; welSave(); }
         if (data.welfareCfg && typeof data.welfareCfg === 'object') { welCfg = welCfgFix(data.welfareCfg); welCfgSave(); }
         if (Array.isArray(data.staff)) { staff = data.staff.map(staffNorm); staffNextId = Math.max(0, ...staff.map(s => s.sid || 0)) + 1; staffSave(); }
@@ -1796,7 +1797,7 @@ function switchTab(tab) {
 }
 function renderCur() {
   ({dashboard:renderDashboard, worklog:renderWorkLog, calendar:(window.renderCalendar||(()=>{})),
-    projects:renderProjects, planpm:renderPlanPM, staff:renderStaff, welfare:renderWelfare}[curTab]||(()=>{}))();
+    projects:renderProjects, planpm:renderPlanPM, staff:renderStaff, welfare:renderWelfare, leave:renderLeave}[curTab]||(()=>{}))();
 }
 
 // ── Helpers ───────────────────────────────────────────────────

@@ -98,9 +98,10 @@ function renderCalPlan(items, y, m, dim) {
 function cpTableHtml(days, y, m) {
   const dis = cpCanEdit() ? '' : ' disabled', cols = 6 + CP_OPS;
   const opList = (() => { try { return opPickList().map(cpStr); } catch (e) { return []; } })();
-  const opSel = (a, i, cur, extra) => {
+  const opSel = (a, i, cur, extra, all) => {
     cur = cur ? staffResolve(cur) : cur;
-    const l = cur && !opList.includes(cur) ? [cur, ...opList] : opList;
+    const taken = (all || []).map((v, j) => j === i ? '' : staffResolve(v)).filter(Boolean);
+    const l = (cur && !opList.includes(cur) ? [cur, ...opList] : opList).filter(v => v === cur || !taken.includes(v));
     // ชื่อแสดงเป็นข้อความเต็ม (ตัดบรรทัดได้) มี select โปร่งใสทับไว้ให้กดเลือก
     return `<label class="cp-opbox${cur ? ' has' : ''}"><span class="cp-opname">${cur ? esc(cur) : '–'}</span><select class="cp-opsel" ${a} data-i="${i}"${dis} onchange="calOpSet(this)"${extra.length ? ` title="รวม: ${esc(extra.join(', '))}"` : ''}><option value="">–</option>${l.map(n => `<option${n === cur ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>${extra.length ? `<small class="cp-more">+${extra.length}</small>` : ''}`;
   };
@@ -120,7 +121,7 @@ function cpTableHtml(days, y, m) {
         `${dayOps ? `<span class="cp-daytag" title="ผู้ปฏิบัติวันนี้ต่างจากทั้งงาน">📅 ผู้ปฏิบัติเฉพาะวันนี้${canEd ? ` <a ${a} onclick="event.stopPropagation();calDayOpsReset(this)" title="กลับไปใช้ผู้ปฏิบัติตามงาน">↺ ใช้ตามงาน</a>` : ''}</span>` : ''}` +
         `${canEd ? `<button type="button" class="cp-offbtn" ${a} onclick="event.stopPropagation();calDayOff(this)" title="หยุดงานนี้เฉพาะวันนี้ (วันอื่นยังอยู่)">⛔ หยุดวันนี้</button>` : ''}</td>` +
       `<td class="cp-prj cp-open" ${a}><span class="cp-plbl">Project</span>${esc(it.project || '-')}</td>` +
-      Array.from({ length: CP_OPS }, (_, i) => `<td class="cp-op">${opSel(a, i, ops[i] || '', i === CP_OPS - 1 ? ops.slice(CP_OPS) : [])}</td>`).join('') +
+      Array.from({ length: CP_OPS }, (_, i) => `<td class="cp-op">${opSel(a, i, ops[i] || '', i === CP_OPS - 1 ? ops.slice(CP_OPS) : [], ops)}</td>`).join('') +
       `<td class="cp-team">${it.team ? `<span class="cp-pill" style="--c:${cpTeamColor(it.team)}">${esc(it.team)}</span>` : ''}</td>` +
       `<td class="cp-chk"><label class="cp-cb"><input type="checkbox" ${a}${wp.ok ? ' checked' : ''}${dis} onchange="calWpSet(this,'ok',this.checked)"><i></i></label></td>` +
       `<td class="cp-by"><input type="text" list="cp-ops-list" placeholder="—" ${a} value="${esc(wp.by || '')}"${dis} onchange="calWpSet(this,'by',this.value.trim())"></td></tr>`;
@@ -316,19 +317,22 @@ function calDetailDel() {
 function opPickList() { if (staff.length) return staffLabels(); return uniq([...(options.operator || []), ...(options.ppmOperator || [])]).filter(Boolean).sort((a, b) => a.localeCompare(b, 'th')); }
 function opsRegister(names) { (names || []).forEach(n => { if (!n) return; ['operator', 'ppmOperator'].forEach(k => { if (!Array.isArray(options[k])) options[k] = []; if (!options[k].includes(n)) options[k].push(n); }); }); saveOpts(); }
 let opsSeq = 0;
-function opsFill(sel, cur) { const l = opPickList(); cur = cur ? staffResolve(cur) : cur; if (cur && !l.includes(cur)) l.unshift(cur); sel.innerHTML = '<option value="">— เลือก Operator —</option>' + l.map(v => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join(''); }
+// ชื่อที่เลือกในช่องอื่นของงานเดียวกันจะไม่แสดงซ้ำ
+function opsFill(sel, cur) { cur = cur ? staffResolve(cur) : cur; const box = sel.closest('.ops-rows'), taken = box ? [...box.querySelectorAll('.ops-sel')].filter(x => x !== sel).map(x => x.value).filter(Boolean) : []; const l = opPickList().filter(v => v === cur || !taken.includes(v)); if (cur && !l.includes(cur)) l.unshift(cur); sel.innerHTML = '<option value="">— เลือก Operator —</option>' + l.map(v => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join(''); }
 function opsInit(cid, names) {
   const box = $(cid); if (!box) return;
   box.innerHTML = `<div class="ops-rows"></div><div class="ops-actions"><button type="button" class="btn-add-jd" onclick="opsAdd('${cid}')">＋ เพิ่มช่อง Operator</button></div>`;
   (names && names.length ? names : ['']).forEach(n => opsAdd(cid, n));
+  opsSync(box);
 }
 function opsAdd(cid, name) {
   const id = 'ops-' + (++opsSeq), d = document.createElement('div'); d.className = 'opt-row ops-row';
-  d.innerHTML = `<select class="ops-sel" id="${id}"></select><button type="button" class="btn-add-opt" title="➕ เพิ่มพนักงานใหม่ในรายชื่อ" onclick="opsNewName('${id}')">＋</button><button type="button" class="btn-del-opt" title="ลบรายการที่เลือก (Operator คนนี้ออกจากงาน)" onclick="opsRm(this)">🗑</button>`;
-  $(cid).querySelector('.ops-rows').appendChild(d); opsFill($(id), name || '');
+  d.innerHTML = `<select class="ops-sel" id="${id}" onchange="opsSync(this)"></select><button type="button" class="btn-add-opt" title="➕ เพิ่มพนักงานใหม่ในรายชื่อ" onclick="opsNewName('${id}')">＋</button><button type="button" class="btn-del-opt" title="ลบรายการที่เลือก (Operator คนนี้ออกจากงาน)" onclick="opsRm(this)">🗑</button>`;
+  $(cid).querySelector('.ops-rows').appendChild(d); opsFill($(id), name || ''); opsSync(d);
 }
 // ลบรายการที่เลือก: มีหลายช่อง → เอาช่องนี้ออก, เหลือช่องเดียว → ล้างค่าให้ว่าง
-function opsRm(btn) { const row = btn.closest('.ops-row'); if (row.parentNode.children.length > 1) row.remove(); else row.querySelector('.ops-sel').value = ''; }
+function opsRm(btn) { const row = btn.closest('.ops-row'), box = row.parentNode; if (box.children.length > 1) row.remove(); else row.querySelector('.ops-sel').value = ''; opsSync(box); }
+function opsSync(el) { const box = el && (el.closest('.ops-rows') || el.querySelector('.ops-rows')); if (box) box.querySelectorAll('.ops-sel').forEach(x => opsFill(x, x.value)); }
 function opsGet(cid) { const b = $(cid); return b ? uniq([...b.querySelectorAll('.ops-sel')].map(x => x.value).filter(Boolean)) : []; }
 function opsRefreshAll(originId, originVal) { document.querySelectorAll('.ops-sel').forEach(x => opsFill(x, x.id === originId ? originVal : x.value)); }
 function opsNewName(id) { openAddStaff(id); }   // เพิ่มชื่อใหม่ = เพิ่มพนักงานในแท็บรายชื่อ แล้วเลือกให้ในช่องนี้

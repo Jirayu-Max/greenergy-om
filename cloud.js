@@ -19,12 +19,13 @@ const COL = {
   options:  { get: () => options, set: v => { options = v; ['typeOfWork','project','owner','operator','jobDescriptions','priority','status','report'].forEach(k => { if (!Array.isArray(options[k])) options[k] = []; }); _orig.saveOpts(); } },
   opdir:    { get: () => ({ emails: opDir.emails || {}, organizer: opDir.organizer || '', sent: opDir.sent || {} }), set: v => { opDir.emails = v.emails || {}; opDir.organizer = v.organizer || ''; opDir.sent = v.sent || {}; _orig.opSaveDir(); } },
   staff:    { idKey: 'sid', get: () => staff, set: v => { staff = v.map(staffNorm); staffNextId = Math.max(0, ...staff.map(s => s.sid || 0)) + 1; _orig.staffSave(); }, empty: v => !v.length },
+  leaves:   { idKey: 'lid', get: () => leaves, set: v => { leaves = Array.isArray(v) ? v : []; lvNextId = Math.max(0, ...leaves.map(l => l.lid || 0)) + 1; _orig.lvSave(); }, empty: v => !v.length },
   welfare:  { idKey: 'wid', get: () => welfare, set: v => { welfare = Array.isArray(v) ? v : []; welNextId = Math.max(0, ...welfare.map(w => w.wid || 0)) + 1; _orig.welSave(); }, empty: v => !v.length },
   welfareCfg: { get: () => welCfg, set: v => { welCfg = welCfgFix(v); _orig.welCfgSave(); } },
   holidays: { get: () => hdRecords, set: v => { hdRecords = Array.isArray(v) ? v : []; _orig.hdSave(); }, empty: v => !v.length },
   flow:     { get: () => ({ flowUrl: opDir.flowUrl || '', autoSend: !!opDir.autoSend }), set: v => { opDir.flowUrl = v.flowUrl || ''; opDir.autoSend = !!v.autoSend; _orig.opSaveDir(); }, secret: true },   // อ่านได้เฉพาะผู้แก้ไข (RLS)
 };
-const KEYMAP = { save: ['records'], ppmSaveStore: ['ppm'], pjSave: ['projects'], saveOpts: ['options'], opSaveDir: ['opdir', 'flow'], staffSave: ['staff'], hdSave: ['holidays'], welSave: ['welfare'], welCfgSave: ['welfareCfg'] };
+const KEYMAP = { save: ['records'], ppmSaveStore: ['ppm'], pjSave: ['projects'], saveOpts: ['options'], opSaveDir: ['opdir', 'flow'], staffSave: ['staff'], hdSave: ['holidays'], welSave: ['welfare'], welCfgSave: ['welfareCfg'], lvSave: ['leaves'] };
 const _orig = {};
 
 // ── รวมข้อมูล 3 ทาง (base = ตอนซิงก์ล่าสุด, local = ที่แก้ในเครื่อง, remote = ล่าสุดในคลาวด์) ──
@@ -189,7 +190,7 @@ async function cloudForceUpload() {
   Object.keys(COL).forEach(k => { CLOUD.base[k] = '__force__'; }); for (const k of Object.keys(COL)) await cloudPush(k); toast('อัปโหลดทับแล้ว'); closeCloud();
 }
 // แท็บที่กำหนดสิทธิ์เข้าถึงได้ (null/ว่าง = ทุกแท็บ; admin เห็นทุกแท็บเสมอ)
-const ACCESS_TABS = [['dashboard', '📊 Dashboard'], ['worklog', '🔧 Corrective maintenance'], ['planpm', '📋 Plan PM & AN'], ['calendar', '🗓️ Calendar'], ['projects', '📑 Project list'], ['staff', '👥 รายชื่อพนักงาน'], ['welfare', '🎁 สวัสดิการ']];
+const ACCESS_TABS = [['dashboard', '📊 Dashboard'], ['worklog', '🔧 Corrective maintenance'], ['planpm', '📋 Plan PM & AN'], ['calendar', '🗓️ Calendar'], ['projects', '📑 Project list'], ['staff', '👥 รายชื่อพนักงาน'], ['welfare', '🎁 สวัสดิการ'], ['leave', '📅 ตารางลา']];
 const needSql = e => /admin_create_user|admin_set_password|admin_delete_user|password_changed|must_change_pw|display_name|tabs|schema cache|does not exist/i.test(e && e.message || '');
 const sqlHint = 'ยังไม่ได้ติดตั้งส่วนจัดการผู้ใช้ในฐานข้อมูล — ให้ผู้ดูแลรันไฟล์ cloud-users.sql ใน Supabase → SQL Editor ก่อน';
 function cloudApplyTabs(tabs) {
@@ -281,7 +282,7 @@ async function savePwChange() {
 // ── เริ่มต้น ─────────────────────────────────────────────────────
 if (CLOUD.on) {
   Object.entries(KEYMAP).forEach(([fn, keys]) => { if (typeof window[fn] !== 'function') return; _orig[fn] = window[fn]; window[fn] = function (...a) { _orig[fn].apply(this, a); keys.forEach(cloudQueue); }; });
-  ['openAdd', 'openEdit', 'del', 'clearPpmSynced', 'addOpt', 'delOpt', 'importJSON', 'openAddProj', 'openEditProj', 'delProj', 'openAddPpm', 'openEditPpm', 'delPpm', 'calMove', 'calWpSet', 'calOpSet', 'woBackfill', 'woCodesOpen', 'woCodesSave', 'opSave', 'opAddPerson', 'opsNewName', 'opsDelName', 'calSendTo', 'openAddStaff', 'openEditStaff', 'saveStaff', 'delStaff', 'stImportFile', 'calHolEdit', 'calHdAdd', 'calHdDel', 'calDayOff', 'calDayOn', 'calDayOpsReset', 'calDayOpsSave', 'welOpenAdd', 'welOpenEdit', 'welSaveEntry', 'welDel', 'welCfgOpen', 'welCfgSaveForm'].forEach(n => {
+  ['openAdd', 'openEdit', 'del', 'clearPpmSynced', 'addOpt', 'delOpt', 'importJSON', 'openAddProj', 'openEditProj', 'delProj', 'openAddPpm', 'openEditPpm', 'delPpm', 'calMove', 'calWpSet', 'calOpSet', 'woBackfill', 'woCodesOpen', 'woCodesSave', 'opSave', 'opAddPerson', 'opsNewName', 'opsDelName', 'calSendTo', 'openAddStaff', 'openEditStaff', 'saveStaff', 'delStaff', 'stImportFile', 'calHolEdit', 'calHdAdd', 'calHdDel', 'calDayOff', 'calDayOn', 'calDayOpsReset', 'calDayOpsSave', 'welOpenAdd', 'welOpenEdit', 'welSaveEntry', 'welDel', 'welCfgOpen', 'welCfgSaveForm', 'lvOpenAdd', 'lvOpenEdit', 'lvSaveEntry', 'lvDel'].forEach(n => {
     if (typeof window[n] !== 'function') return; const f = window[n];
     window[n] = function (...a) { if (!cloudEdit()) { toast('สิทธิ์ดูอย่างเดียว — ไม่สามารถแก้ไขได้'); return; } return f.apply(this, a); };
   });
@@ -291,4 +292,4 @@ if (CLOUD.on) {
     $('login-pw').addEventListener('keydown', e => { if (e.key === 'Enter') cloudLogin(false); });
     const { data } = await CLOUD.sb.auth.getSession(); if (data && data.session) cloudAfterLogin(data.session.user);
   });
-} else { _orig.save = save; _orig.ppmSaveStore = ppmSaveStore; _orig.pjSave = pjSave; _orig.saveOpts = saveOpts; _orig.opSaveDir = opSaveDir; _orig.staffSave = staffSave; _orig.hdSave = hdSave; _orig.welSave = welSave; _orig.welCfgSave = welCfgSave; document.addEventListener('DOMContentLoaded', cloudChip); }
+} else { _orig.save = save; _orig.ppmSaveStore = ppmSaveStore; _orig.pjSave = pjSave; _orig.saveOpts = saveOpts; _orig.opSaveDir = opSaveDir; _orig.staffSave = staffSave; _orig.hdSave = hdSave; _orig.welSave = welSave; _orig.welCfgSave = welCfgSave; _orig.lvSave = lvSave; document.addEventListener('DOMContentLoaded', cloudChip); }
