@@ -256,7 +256,7 @@
       <div class="kpi-card amber"> <div class="kpi-label">🧾 ใช้ไป</div><div class="kpi-value" id="wel-k-used" style="font-size:26px">฿0</div><div class="kpi-sub">Used</div></div>
       <div class="kpi-card moss">  <div class="kpi-label">✅ คงเหลือ</div><div class="kpi-value" id="wel-k-left" style="font-size:26px">฿0</div><div class="kpi-sub">Remaining</div></div>
     </div>
-    <div class="table-card"><div class="table-header"><h3>💳 ยอดคงเหลือรายคน</h3></div><div id="wel-people" class="wel-grid"></div></div>
+    <div class="table-card"><div class="table-header"><h3>💳 ยอดคงเหลือรายคน</h3></div><div id="wel-selbar" class="wel-selbar"></div><div id="wel-people" class="wel-grid"></div></div>
     <div class="table-card" style="margin-top:14px">
       <div class="table-header"><h3>🧾 รายการใช้สวัสดิการ</h3><span id="wel-count" class="count-chip"></span></div>
       <div class="table-wrap"><table class="zebra"><thead><tr><th>วันที่</th><th>พนักงาน</th><th>ประเภท</th><th>นำไปใช้</th><th>จำนวนเงิน</th><th>บันทึกโดย</th><th></th></tr></thead><tbody id="wel-tbody"></tbody></table></div>
@@ -574,12 +574,14 @@
 <datalist id="dl-st-pos"></datalist>
 
 <!-- ══ WELFARE MODALS ══ -->
-<div id="wel-modal" class="modal-overlay"><div class="modal modal-wide" style="max-width:620px"><h2 id="wel-title-m">➕ บันทึกการใช้สวัสดิการ</h2>
+<div id="wel-modal" class="modal-overlay"><div class="modal modal-wide" style="max-width:720px"><h2 id="wel-title-m">➕ บันทึกการใช้สวัสดิการ</h2>
   <form class="modal-form" onsubmit="event.preventDefault(); welSaveEntry();"><div class="modal-body">
     <div class="form-grid cols-2">
-      <div class="form-group"><label>พนักงาน *</label><select id="wel-f-sid"></select></div>
+      <div class="form-group full"><label>พนักงาน * <span class="lbl-hint">(เลือกได้หลายคน — ตัวเลขด้านขวา = สิทธิ์คงเหลือ)</span></label>
+        <div class="wel-pkbar"><input type="text" id="wel-f-q" placeholder="🔍 ค้นหาชื่อ / ทีม"><span id="wel-f-allbtn"><button type="button" class="btn-secondary" onclick="welPickAll(true)">เลือกทั้งหมด</button> <button type="button" class="btn-secondary" onclick="welPickAll(false)">ล้าง</button></span></div>
+        <div id="wel-f-people" class="wel-pick"></div></div>
       <div class="form-group"><label>วันที่ *</label><input type="date" id="wel-f-date"></div>
-      <div class="form-group"><label>จำนวนเงิน (บาท) *</label><input type="number" id="wel-f-amount" min="0" step="0.01" placeholder="เช่น 350"></div>
+      <div class="form-group"><label>จำนวนเงิน (บาท) *</label><div class="opt-row"><input type="number" id="wel-f-amount" min="0" step="0.01" placeholder="เช่น 350"><span id="wel-f-modebox"><select id="wel-f-mode"><option value="each">ต่อคน</option><option value="split">ยอดรวม หารเท่ากัน</option></select></span></div></div>
       <div class="form-group"><label>ประเภท</label><input type="text" id="wel-f-cat" list="wel-f-cats"></div>
       <div class="form-group full"><label>นำไปใช้อะไร *</label><input type="text" id="wel-f-item" placeholder="เช่น ค่าอาหารกลางวันทีม หน้างาน UACJ"></div>
       <div class="form-group full"><label>หมายเหตุ / เลขที่ใบเสร็จ</label><input type="text" id="wel-f-note"></div>

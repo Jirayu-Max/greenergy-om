@@ -1075,3 +1075,21 @@ body[data-tab="welfare"] .content { max-width: 1500px; }
 .wel-amt { text-align: right; font-weight: 700; white-space: nowrap; color: #1f3b30; }
 .wel-note { font-size: 11.5px; color: #8a8f88; }
 .wel-left { margin-top: 10px; font-size: 13px; font-weight: 700; color: #2a5444; }
+
+/* ═══ v23: สวัสดิการ เลือกหลายคน ═══ */
+.wel-card { position: relative; cursor: pointer; }
+.wel-card.sel { background: #f2f8f3; box-shadow: 0 0 0 2px #35654E inset; }
+.wel-chk { position: absolute; top: 8px; right: 10px; } .wel-chk input { width: 16px; height: 16px; cursor: pointer; accent-color: #35654E; }
+.wel-selbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px 0; font-size: 13px; }
+.wel-selhint { color: #8a8f88; }
+.wel-selsum { color: #2a5444; } .wel-selsum .neg, .wel-left .neg, .wel-pk .neg { color: #c0392b; }
+.wel-selnames { flex-basis: 100%; order: 3; font-size: 12px; color: #6b6b6b; }
+.wel-pkbar { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+.wel-pkbar input { flex: 1; min-width: 160px; height: 34px; border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; font: inherit; font-size: 13px; }
+.wel-pkbar .btn-secondary { padding: 6px 10px; font-size: 12px; }
+.wel-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; max-height: 230px; overflow: auto; padding: 2px; }
+.wel-pk { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border: 1px solid #e3ded2; border-radius: 8px; cursor: pointer; font-size: 12.5px; background: #fff; }
+.wel-pk.on { border-color: #35654E; background: #eef5f0; }
+.wel-pk input { accent-color: #35654E; } .wel-pkn { flex: 1; min-width: 0; line-height: 1.25; } .wel-pkn small { display: block; font-size: 10.5px; color: #8a8f88; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wel-pk b { font-size: 12px; color: #1e7b45; white-space: nowrap; }
+#wel-f-mode { height: 38px; border: 1px solid var(--border); border-radius: 8px; padding: 0 8px; font: inherit; font-size: 13px; }
